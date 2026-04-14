@@ -716,11 +716,6 @@ void BlurEffect::prePaintWindow(RenderView *view, EffectWindow *w, WindowPrePain
     if (m_windowManager->windowIsBlurred(w)) {
         data.setTranslucent();
     }
-
-    // BBDX:
-    // invalidate during prePaintWindow so actual paint
-    // should have the info ready
-    m_windowManager->invalidateBlurCacheAbove(w);
 }
 
 bool BlurEffect::shouldBlur(const EffectWindow *w, int mask, const WindowPaintData &data) const
@@ -752,6 +747,11 @@ bool BlurEffect::shouldBlur(const EffectWindow *w, int mask, const WindowPaintDa
 void BlurEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &deviceRegion, WindowPaintData &data)
 {
     blur(renderTarget, viewport, w, mask, deviceRegion, data);
+
+    // BBDX:
+    // invalidate during prePaintWindow so actual paint
+    // should have the info ready
+    m_windowManager->invalidateBlurCacheAbove(w, deviceRegion);
 
     // Draw the window over the blurred area
     effects->drawWindow(renderTarget, viewport, w, mask, deviceRegion, data);

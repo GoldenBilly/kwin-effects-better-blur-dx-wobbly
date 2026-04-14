@@ -309,7 +309,7 @@ qreal BBDX::WindowManager::getEffectiveBlurOpacity(const KWin::EffectWindow *w, 
     return window->getEffectiveBlurOpacity(data);
 }
 
-void BBDX::WindowManager::invalidateBlurCacheAbove(const KWin::EffectWindow *w) const {
+void BBDX::WindowManager::invalidateBlurCacheAbove(const KWin::EffectWindow *w, const KWin::Region &deviceRegion) const {
     // Only the "most normal" windows, visible
     // windows should invalidate the cache to
     // make it live longer.
@@ -332,8 +332,11 @@ void BBDX::WindowManager::invalidateBlurCacheAbove(const KWin::EffectWindow *w) 
             continue;
         }
 
-        if (kWindow->frameGeometry().intersects(w->frameGeometry())) {
-            bbdxWindow->invalidateBlurCache();
+        for (const KWin::Rect &rect : deviceRegion.rects()) {
+            if (KWin::RectF(kWindow->frameGeometry()).intersects(rect)) {
+                bbdxWindow->invalidateBlurCache();
+                break;
+            }
         }
     }
 }
