@@ -324,8 +324,10 @@ void BBDX::WindowManager::invalidateBlurCacheAbove(const KWin::EffectWindow *w, 
             continue;
         }
 
+        KWin::RectF localWindow = kWindow->frameGeometry().translated(kWindow->pos().toPoint());
+
         for (const KWin::Rect &rect : deviceRegion.rects()) {
-            if (KWin::RectF(kWindow->frameGeometry()).intersects(rect)) {
+            if (localWindow.intersects(rect)) {
                 bbdxWindow->invalidateBlurCache();
                 break;
             }
