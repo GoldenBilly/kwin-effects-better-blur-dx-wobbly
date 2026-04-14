@@ -248,6 +248,10 @@ void BBDX::WindowManager::triggerBlurRegionUpdate(KWin::EffectWindow *w) const {
     emit windowWantsBlurRegionUpdate(w);
 }
 
+void BBDX::WindowManager::invalidateBlurCache(KWin::EffectWindow *w) const {
+    emit windowWantsBlurRegionUpdate(w);
+}
+
 void BBDX::WindowManager::setWindowIsTransformed(const KWin::EffectWindow *w, bool toggle) const {
     const auto window = findWindow(w);
 

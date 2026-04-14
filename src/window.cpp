@@ -86,6 +86,7 @@ void BBDX::Window::slotWindowFinishUserMovedResized() {
 void BBDX::Window::slotWindowFrameGeometryChanged() {
     updateForceBlurRegion();
     refreshMaximizedState();
+    invalidateBlurCache();
 
     // Not sure if this is the best place to unset
     // this but seems to work fine for now
@@ -193,8 +194,12 @@ void BBDX::Window::updateForceBlurRegion() {
     triggerBlurRegionUpdate();
 }
 
-void BBDX::Window::triggerBlurRegionUpdate() {
+void BBDX::Window::triggerBlurRegionUpdate() const {
     m_windowManager->triggerBlurRegionUpdate(m_effectwindow);
+}
+
+void BBDX::Window::invalidateBlurCache() const {
+    m_windowManager->invalidateBlurCache(m_effectwindow);
 }
 
 bool BBDX::Window::opacityChangedFromOriginal() {

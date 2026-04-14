@@ -73,6 +73,7 @@ public Q_SLOT:
 
 signals:
     void windowWantsBlurRegionUpdate(KWin::EffectWindow *w) const;
+    void windowInvalidatedBlurCache(KWin::EffectWindow *w) const;
 
 public:
     explicit WindowManager();
@@ -111,6 +112,11 @@ public:
      * emits the wantsBlurRegionUpdate signal
      */
     void triggerBlurRegionUpdate(KWin::EffectWindow *w) const;
+
+    /**
+     * emits the windowInvalidatedBlurCache signal
+     */
+    void invalidateBlurCache(KWin::EffectWindow *w) const;
 
     /**
      * Set the "window is transformed" flag on a window

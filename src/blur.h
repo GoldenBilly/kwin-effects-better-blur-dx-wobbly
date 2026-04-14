@@ -118,6 +118,7 @@ public Q_SLOTS:
     void slotWindowAdded(KWin::EffectWindow *w);
     void slotWindowDeleted(KWin::EffectWindow *w);
     void slotWindowWantsBlurRegionUpdate(EffectWindow *w);
+    void slotWindowInvalidatedBlurCache(EffectWindow *w);
 #if defined(BETTERBLUR_X11)
     void slotScreenRemoved(KWin::Output *view);
 #else

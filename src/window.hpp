@@ -107,8 +107,9 @@ private:
 
     void refreshMaximizedState();
     void updateForceBlurRegion();
-    void triggerBlurRegionUpdate();
+    void triggerBlurRegionUpdate() const;
     bool opacityChangedFromOriginal();
+    void invalidateBlurCache() const;
 
     /**
      * Helpers for interacting with m_blurOriginMask
