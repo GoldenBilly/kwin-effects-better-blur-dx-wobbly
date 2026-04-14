@@ -152,7 +152,7 @@ public:
     /**
      * Invalidate cache for all overlapping windows above
      */
-    void invalidateBlurCacheAbove(const KWin::EffectWindow *w, const KWin::Region &deviceRegion) const;
+    void invalidateBlurCacheAbove(const KWin::EffectWindow *w, const KWin::RenderViewport &viewport, const KWin::Region &deviceRegion) const;
 };
 
 } // namespace KWin

@@ -6,10 +6,10 @@
 #include "utils.h"
 #include "window.hpp"
 
+#include <core/pixelgrid.h>
 #include <core/renderviewport.h>
 #include <effect/effecthandler.h>
 #include <effect/effectwindow.h>
-#include <qtpreprocessorsupport.h>
 #include <scene/borderradius.h>
 #include <window.h>
 
@@ -309,7 +309,7 @@ qreal BBDX::WindowManager::getEffectiveBlurOpacity(const KWin::EffectWindow *w, 
     return window->getEffectiveBlurOpacity(data);
 }
 
-void BBDX::WindowManager::invalidateBlurCacheAbove(const KWin::EffectWindow *w, const KWin::Region &deviceRegion) const {
+void BBDX::WindowManager::invalidateBlurCacheAbove(const KWin::EffectWindow *w, const KWin::RenderViewport &viewport, const KWin::Region &deviceRegion) const {
     // Only the "most normal", visible windows should
     // invalidate the cache to make it live longer.
     if (w->isSpecialWindow()
@@ -324,10 +324,15 @@ void BBDX::WindowManager::invalidateBlurCacheAbove(const KWin::EffectWindow *w, 
             continue;
         }
 
-        KWin::RectF localWindow = kWindow->frameGeometry().translated(kWindow->pos().toPoint());
+        const QRect windowRect = kWindow->frameGeometry().toRect();
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
+        const QRect deviceWindowRect = snapToPixelGrid(scaledRect(windowRect, viewport.scale()));
+#else
+        const QRect deviceWindowRect = snapToPixelGrid(viewport.mapToDeviceCoordinates(windowRect));
+#endif
 
         for (const KWin::Rect &rect : deviceRegion.rects()) {
-            if (localWindow.intersects(rect)) {
+            if (deviceWindowRect.intersects(rect)) {
                 bbdxWindow->invalidateBlurCache();
                 break;
             }
