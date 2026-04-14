@@ -94,6 +94,11 @@ private:
     std::optional<qreal> m_originalOpacityActive{};
     std::optional<qreal> m_originalOpacityInactive{};
 
+    // timestamp when this window last triggered
+    // BlurCache invalidation of *another* window
+    // (used for rate limiting)
+    std::chrono::time_point<std::chrono::steady_clock> m_lastBlurCacheInvalidationAbove{};
+
 private:
     /**
      * Whether this window should never be force blurred
@@ -193,6 +198,15 @@ public:
      * Invalidate the blur cache for this window
      */
     void invalidateBlurCache() const;
+
+    /**
+     * Returns true if this window waited can trigger a cache invalidation
+     * in BBDX::WindowManager::invalidateBlurCacheAbove and updates
+     * m_lastBlurCacheInvalidationAbove.
+     *
+     * Returns false if it can't yet.
+     */
+    bool canTriggerBlurCacheInvalidationAbove();
 
     /**
      * operator to facilitate logging of windows

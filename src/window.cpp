@@ -202,6 +202,21 @@ void BBDX::Window::invalidateBlurCache() const {
     m_windowManager->invalidateBlurCache(m_effectwindow);
 }
 
+bool BBDX::Window::canTriggerBlurCacheInvalidationAbove() {
+    const auto elapsed = std::chrono::steady_clock::now() - m_lastBlurCacheInvalidationAbove;
+
+    // TODO: make this not hardcoded
+    constexpr auto RATE_LIMIT_FPS = 15;
+    constexpr auto RATE_LIMIT_WAIT_MS = std::chrono::milliseconds{1000 / RATE_LIMIT_FPS};
+
+    if (elapsed < RATE_LIMIT_WAIT_MS) {
+        return false;
+    }
+
+    m_lastBlurCacheInvalidationAbove = std::chrono::steady_clock::now();
+    return true;
+}
+
 bool BBDX::Window::opacityChangedFromOriginal() {
     if (effectwindow()->window()->isActive()) {
         return !qFuzzyCompare(m_originalOpacityActive.value_or(1.0), effectwindow()->opacity());

@@ -310,37 +310,37 @@ qreal BBDX::WindowManager::getEffectiveBlurOpacity(const KWin::EffectWindow *w, 
 }
 
 void BBDX::WindowManager::invalidateBlurCacheAbove(const KWin::EffectWindow *w, const KWin::RenderViewport &viewport, const KWin::Region &deviceRegion) const {
-    // TODO: Rethink this logic.
-    //       Maybe it's better / more accurate
-    //       to just allow (almost) all windows,
-    //       but with some sort of rate limit
-    //       (i.e. only allow windows to invalidate another
-    //       window's cache every X ms).
+    // Currently this uses a simple rate limit based approach
+    // to avoid excessive invalidations.
     //
-    //       Pros:
-    //       - allows for animated wallpapers
-    //         (currently filtered)
-    //       - allows for proper caching above other windows
-    //         (currently make the cache pretty useless in these cases)
-    //       Cons:
-    //       - Potential to look "choppy"
-    //         (user configurable "Max blur repaints per second" defaulting to ~15 fps?
-    //         The window itself can of course always invalidate its cache for drag operations etc.
-    //         or when relevant blur parameters change.)
+    // Pros:
+    // - allows for animated wallpapers
+    //   (currently filtered)
+    // - allows for proper caching above other windows
+    //   (currently make the cache pretty useless in these cases)
+    // Cons:
+    // - Potential to look "choppy"
+    //   (user configurable "Max blur repaints per second" defaulting to ~15 fps?
+    //   The window itself can of course always invalidate its cache for drag operations etc.
+    //   or when relevant blur parameters change.)
 
-    // Only the "most normal", visible windows should
-    // invalidate the cache to make it live longer.
-    if (w->isSpecialWindow()
-        || w->window()->isInternal()
-        || !w->isVisible()) {
+    const auto window = findWindow(w);
+    if (!window) {
+        // unmanaged windows don't get this privilege :p
         return;
     }
 
-    // invalidate
+    if (!window->canTriggerBlurCacheInvalidationAbove()) {
+        return;
+    }
+
+    // Ivalidate
+    //
     // TODO: Not sure if using deviceRegion is the best call here.
     //       It's usually quite a bit larger than the actual window
     //       and thus neighbouring windows (e.g. when tiling vertically)
-    //       can constantly invalidate eachother.
+    //       can still invalidate eachother... but just going with frameGeometry
+    //       also has issues, especially around rounded corners.
     for (const auto &[kWindow, bbdxWindow] : m_windows) {
         if (kWindow->window()->stackingOrder() <= w->window()->stackingOrder()) {
             continue;
