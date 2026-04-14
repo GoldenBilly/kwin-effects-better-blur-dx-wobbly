@@ -324,16 +324,6 @@ void BBDX::WindowManager::invalidateBlurCacheAbove(const KWin::EffectWindow *w, 
     //   The window itself can of course always invalidate its cache for drag operations etc.
     //   or when relevant blur parameters change.)
 
-    const auto window = findWindow(w);
-    if (!window) {
-        // unmanaged windows don't get this privilege :p
-        return;
-    }
-
-    if (!window->canTriggerBlurCacheInvalidationAbove()) {
-        return;
-    }
-
     // Ivalidate
     //
     // TODO: Not sure if using deviceRegion is the best call here.
@@ -355,7 +345,9 @@ void BBDX::WindowManager::invalidateBlurCacheAbove(const KWin::EffectWindow *w, 
 
         for (const KWin::Rect &rect : deviceRegion.rects()) {
             if (deviceWindowRect.intersects(rect)) {
-                bbdxWindow->invalidateBlurCache();
+                if (bbdxWindow->canReceiveBlurCacheInvalidation()) {
+                    bbdxWindow->invalidateBlurCache();
+                }
                 break;
             }
         }

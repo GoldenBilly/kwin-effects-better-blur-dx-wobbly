@@ -202,8 +202,8 @@ void BBDX::Window::invalidateBlurCache() const {
     m_windowManager->invalidateBlurCache(m_effectwindow);
 }
 
-bool BBDX::Window::canTriggerBlurCacheInvalidationAbove() {
-    const auto elapsed = std::chrono::steady_clock::now() - m_lastBlurCacheInvalidationAbove;
+bool BBDX::Window::canReceiveBlurCacheInvalidation() {
+    const auto elapsed = std::chrono::steady_clock::now() - m_lastBlurCacheInvalidationReceived;
 
     // TODO: make this not hardcoded
     constexpr auto RATE_LIMIT_FPS = 15;
@@ -213,7 +213,7 @@ bool BBDX::Window::canTriggerBlurCacheInvalidationAbove() {
         return false;
     }
 
-    m_lastBlurCacheInvalidationAbove = std::chrono::steady_clock::now();
+    m_lastBlurCacheInvalidationReceived = std::chrono::steady_clock::now();
     return true;
 }
 
