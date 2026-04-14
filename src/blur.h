@@ -7,11 +7,13 @@
 
 #pragma once
 
+#include "blur_cache.hpp"
+#include "kwin_version.hpp"
 #include "refraction_pass.hpp"
 #include "rounded_corners_pass.hpp"
 #include "settings.h"
 #include "window_manager.hpp"
-#include "kwin_version.hpp"
+
 #include <opengl/glframebuffer.h>
 
 #if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
@@ -47,9 +49,7 @@ struct BlurRenderData
     std::vector<std::unique_ptr<GLTexture>> textures;
     std::vector<std::unique_ptr<GLFramebuffer>> framebuffers;
 
-    std::unique_ptr<GLTexture> blurCacheTexture;
-    std::unique_ptr<GLFramebuffer> blurCacheFramebuffer;
-    bool blurCacheValid{false};
+    BBDX::BlurCacheData cache;
 };
 
 struct BlurEffectData
@@ -186,12 +186,6 @@ private:
         int noiseTextureStength = 0;
     } m_noisePass;
 
-    struct
-    {
-        std::unique_ptr<GLShader> shader;
-        int mvpMatrixLocation;
-    } m_texturePass;
-
     bool m_valid = false;
     long net_wm_blur_region = 0;
 #if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 4)
@@ -243,6 +237,7 @@ private:
     BBDX::RefractionPass m_refractionPass{};
     BBDX::RoundedCornersPass m_roundedCornersPass{};
     BBDX::WindowManager m_windowManager{};
+    BBDX::BlurCache m_blurCache{};
     bool m_forceContrastParams{false};
 };
 

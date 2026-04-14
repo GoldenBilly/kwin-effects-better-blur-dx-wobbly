@@ -27,7 +27,7 @@ void BlurEffect::slotWindowInvalidatedBlurCache(EffectWindow *w) {
     if (auto it = m_windows.find(w); it != m_windows.end()) {
         BlurEffectData &blurInfo = it->second;
         for (auto &[_, renderInfo] : blurInfo.render) {
-            renderInfo.blurCacheValid = false;
+            renderInfo.cache.valid = false;
         }
     }
 }
