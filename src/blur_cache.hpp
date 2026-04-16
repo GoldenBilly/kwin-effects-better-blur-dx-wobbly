@@ -1,5 +1,6 @@
 #pragma once
 
+#include <effect/effectwindow.h>
 #include <opengl/glframebuffer.h>
 #include <opengl/glshader.h>
 #include <opengl/glvertexbuffer.h>
@@ -19,6 +20,9 @@ namespace BBDX {
  * Blur cache data unique to each EffectWindow and RenderView combination
  */
 struct BlurCacheData {
+    // pointer back to the "owning" effectwindow
+    KWin::EffectWindow *w;
+
     // whether the cache is valid or not
     bool valid{false};
 

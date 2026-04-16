@@ -23,7 +23,11 @@ bool BBDX::BlurCacheData::invalidate() {
     }
 
     if (hits >= CACHE_HITS_LOGGED_MIN) {
-        qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Cache hits before invalidation:" << hits;
+        if (w) [[likely]] {
+            qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Cache hits before invalidation (" << w->windowClass() << "):" << hits;
+        } else {
+            qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Cache hits before invalidation ( unknown window ):" << hits;
+        }
     }
 
     valid = false;

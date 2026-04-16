@@ -797,6 +797,12 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
 
     BlurEffectData &blurInfo = it->second;
     BlurRenderData &renderInfo = blurInfo.render[m_currentView];
+
+    // BBDX:
+    if (!renderInfo.cache.w) {
+        renderInfo.cache.w = w;
+    }
+
     if (!shouldBlur(w, mask, data)) {
         return;
     }
