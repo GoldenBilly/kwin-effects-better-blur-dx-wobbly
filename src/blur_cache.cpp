@@ -4,11 +4,14 @@
 
 #include <core/rect.h>
 #include <core/renderviewport.h>
+#include <epoxy/gl_generated.h>
 #include <opengl/eglcontext.h>
+#include <opengl/glframebuffer.h>
 #include <opengl/glshadermanager.h>
 
 #include <QLoggingCategory>
 #include <QtNumeric>
+#include <opengl/gltexture.h>
 
 Q_LOGGING_CATEGORY(BLUR_CACHE, "kwin_effect_better_blur_dx.blur_cache", QtInfoMsg)
 
@@ -30,6 +33,18 @@ bool BBDX::BlurCacheData::invalidate() {
 }
 
 BBDX::BlurCache::BlurCache() {
+    m_texturePass.shader = KWin::ShaderManager::instance()->generateShaderFromFile(KWin::ShaderTrait::MapTexture,
+                                                                           QStringLiteral(":/effects/better_blur_dx/shaders/vertex.vert"),
+                                                                           QStringLiteral(":/effects/better_blur_dx/shaders/texture_compare.frag"));
+    if (!m_texturePass.shader) {
+        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to load texture compare pass shader";
+        return;
+    } else {
+        m_textureComparePass.mvpMatrixLocation = m_textureComparePass.shader->uniformLocation("modelViewProjectionMatrix");
+        m_textureComparePass.texUnitOldLocation = m_textureComparePass.shader->uniformLocation("texUnitOld");
+        m_textureComparePass.texUnitNewLocation = m_textureComparePass.shader->uniformLocation("texUnitNew");
+    }
+
     m_texturePass.shader = KWin::ShaderManager::instance()->generateShaderFromFile(KWin::ShaderTrait::MapTexture,
                                                                            QStringLiteral(":/effects/better_blur_dx/shaders/vertex.vert"),
                                                                            QStringLiteral(":/effects/better_blur_dx/shaders/texture.frag"));
@@ -70,11 +85,70 @@ void BBDX::BlurCache::updateBlurCacheDataBuffers(KWin::BlurRenderData &renderInf
     }
 }
 
-void BBDX::BlurCache::maybeInvalidateCache(BlurCacheData &cacheData, qreal opacity) const {
+void BBDX::BlurCache::maybeInvalidateCache(KWin::BlurRenderData &renderInfo,
+                                           qreal opacity,
+                                           KWin::GLVertexBuffer *vbo) const {
+    auto &cacheData = renderInfo.cache;
     if (!cacheData.opacity.has_value() || !qFuzzyCompare(cacheData.opacity.value(), opacity)) {
         cacheData.opacity = opacity;
-        cacheData.valid = false;
+        cacheData.invalidate();
+        return;
     }
+
+    KWin::GLTexture *prevBlitTexture = cacheData.prevBlitTexture.get();
+    KWin::GLFramebuffer *blitFramebuffer = renderInfo.framebuffers[0].get();
+    KWin::GLTexture *blitTexture = blitFramebuffer->colorAttachment();
+
+    // previous blit texture is definitely different
+    if (!prevBlitTexture || prevBlitTexture->size() != blitTexture->size() || prevBlitTexture->internalFormat() != blitTexture->internalFormat()) {
+        cacheData.invalidate();
+        return;
+    }
+
+    // check if textures differ on the pixel level
+    // we'll just (ab)use the provided framebuffer for this
+    // as it *should* always be correct
+    KWin::ShaderManager::instance()->pushShader(m_textureComparePass.shader.get());
+    KWin::GLFramebuffer::pushFramebuffer(blitFramebuffer);
+
+    QMatrix4x4 projectionMatrix;
+    projectionMatrix.ortho(QRectF(0.0, 0.0, blitTexture->width(), blitTexture->height()));
+
+    m_textureComparePass.shader->setUniform(m_textureComparePass.mvpMatrixLocation, projectionMatrix);
+
+    m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitOldLocation, 0);
+    glActiveTexture(GL_TEXTURE0);
+    prevBlitTexture->bind();
+
+    m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitNewLocation, 1);
+    glActiveTexture(GL_TEXTURE1);
+    blitTexture->bind();
+
+    GLuint query;
+    glGenQueries(1, &query);
+
+    // count non-discarded pixels without actually drawing
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glBeginQuery(GL_SAMPLES_PASSED, query);
+    vbo->draw(GL_TRIANGLES, 0, 6);
+    glEndQuery(GL_SAMPLES_PASSED);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+    // await query
+    GLuint pixelsDifferent;
+    glGetQueryObjectuiv(query, GL_QUERY_RESULT, &pixelsDifferent);
+
+    // TODO: maybe we relax this a bit to improve cache TTL
+    if (pixelsDifferent > 0) {
+        cacheData.invalidate();
+    }
+
+    // cleanup
+    glDeleteQueries(1, &query);
+    glActiveTexture(GL_TEXTURE0);
+
+    KWin::GLFramebuffer::popFramebuffer();
+    KWin::ShaderManager::instance()->popShader();
 }
 
 void BBDX::BlurCache::setupVBO(const KWin::Rect &scaledBackgroundRect, std::span<KWin::GLVertex2D> &map, size_t &vboIndex) const {

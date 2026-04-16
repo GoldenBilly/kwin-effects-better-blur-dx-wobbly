@@ -20,6 +20,8 @@
   <file>shaders/rounded_corners.vert</file>
   <file>shaders/texture_core.frag</file>
   <file>shaders/texture.frag</file>
+  <file>shaders/texture_compare_core.frag</file>
+  <file>shaders/texture_compare.frag</file>
   <file>shaders/upsample.frag</file>
   <file>shaders/upsample_core.frag</file>
   <file>shaders/vertex.vert</file>

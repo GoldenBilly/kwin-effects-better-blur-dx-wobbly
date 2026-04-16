@@ -30,6 +30,9 @@ struct BlurCacheData {
     std::unique_ptr<KWin::GLTexture> texture;
     std::unique_ptr<KWin::GLFramebuffer> framebuffer;
 
+    // texture of the previous "raw" pixels (blit grabbed from scene)
+    std::unique_ptr<KWin::GLTexture> prevBlitTexture;
+
     // things that affect validity of the cache
     std::optional<qreal> opacity{};
 
@@ -41,6 +44,13 @@ struct BlurCacheData {
 
 class BlurCache {
 private:
+    struct {
+        std::unique_ptr<KWin::GLShader> shader;
+        int mvpMatrixLocation;
+        int texUnitOldLocation;
+        int texUnitNewLocation;
+    } m_textureComparePass;
+
     struct {
         std::unique_ptr<KWin::GLShader> shader;
         int mvpMatrixLocation;
@@ -63,9 +73,11 @@ public:
     void updateBlurCacheDataBuffers(KWin::BlurRenderData &renderInfo, const KWin::Rect &scaledBackgroundRect, GLenum textureFormat) const;
 
     /**
-     * Update relevant properties and invalidate cache of provided renderInfo if they changed
+     * Check and update certain applicable properties and invalidate cache of provided renderInfo if they changed
+     *
+     * If no "easy" properties exist resorts to comparing the blit textures
      */
-    void maybeInvalidateCache(BlurCacheData &cacheData, qreal opacity) const;
+    void maybeInvalidateCache(KWin::BlurRenderData &renderInfo, qreal opacity, KWin::GLVertexBuffer *vbo) const;
 
     /**
      * Injects the geometry used for the cache, in logical pixels
