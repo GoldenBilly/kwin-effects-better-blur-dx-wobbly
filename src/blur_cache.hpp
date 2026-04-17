@@ -3,6 +3,7 @@
 #include <effect/effectwindow.h>
 #include <opengl/glframebuffer.h>
 #include <opengl/glshader.h>
+#include <opengl/gltexture.h>
 #include <opengl/glvertexbuffer.h>
 
 #include <memory>
@@ -43,7 +44,7 @@ struct BlurCacheData {
     // helper to invalidate cache, reset the hit counter
     // and print debug stats
     // returns true if invalidated
-    bool invalidate();
+    bool invalidate(QString reason = "");
 };
 
 class BlurCache {
@@ -100,6 +101,12 @@ public:
      * vbo->draw() wrapper to draw into BlurCacheData of the provided renderInfo
      */
     void drawToCache(const KWin::BlurRenderData &renderInfo, KWin::GLVertexBuffer *vbo) const;
+
+    /**
+     * Clone the blit texture (expected at renderInfo.framebuffers[0])
+     * May be nullptr if clone failed
+     */
+    std::unique_ptr<KWin::GLTexture> cloneBlitTexture(KWin::BlurRenderData &renderInfo) const;
 };
 
 } // namespace BBDX

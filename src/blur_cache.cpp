@@ -15,19 +15,28 @@
 
 Q_LOGGING_CATEGORY(BLUR_CACHE, "kwin_effect_better_blur_dx.blur_cache", QtInfoMsg)
 
+// For BlurCache debugging this should be 0.
+// In almost all other cases this should be higher
+// because the message is very spammy.
+// 5 seems like a sane default to still provide the metric.
 constexpr uint CACHE_HITS_LOGGED_MIN = 5;
 
-bool BBDX::BlurCacheData::invalidate() {
+bool BBDX::BlurCacheData::invalidate(QString reason) {
     if (!valid) {
         return false;
     }
 
     if (hits >= CACHE_HITS_LOGGED_MIN) {
+        QString windowClass;
         if (w) [[likely]] {
-            qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Cache hits before invalidation (" << w->windowClass() << "):" << hits;
+            windowClass = w->windowClass();
         } else {
-            qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Cache hits before invalidation ( unknown window ):" << hits;
+            windowClass = "unknown window";
         }
+
+        qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Cache invalidated:" << windowClass << "\n"
+                            << "Hits:"   << hits << "\n"
+                            << "Reason:" << reason;
     }
 
     valid = false;
@@ -110,8 +119,18 @@ void BBDX::BlurCache::maybeInvalidateCache(KWin::BlurRenderData &renderInfo,
     KWin::GLTexture *blitTexture = blitFramebuffer->colorAttachment();
 
     // previous blit texture is definitely different
-    if (!prevBlitTexture || prevBlitTexture->size() != blitTexture->size() || prevBlitTexture->internalFormat() != blitTexture->internalFormat()) {
-        cacheData.invalidate();
+    if (!prevBlitTexture) {
+        cacheData.invalidate("No prevBlitTexture");
+        return;
+    }
+
+    if (prevBlitTexture->size() != blitTexture->size()) {
+        cacheData.invalidate("Blit texture size mismatch");
+        return;
+    }
+
+    if (prevBlitTexture->internalFormat() != blitTexture->internalFormat()) {
+        cacheData.invalidate("Blit texture format mismatch");
         return;
     }
 
@@ -152,7 +171,7 @@ void BBDX::BlurCache::maybeInvalidateCache(KWin::BlurRenderData &renderInfo,
     GLuint anyPixelsDifferent;
     glGetQueryObjectuiv(query, GL_QUERY_RESULT, &anyPixelsDifferent);
     if (anyPixelsDifferent == GL_TRUE) {
-        cacheData.invalidate();
+        cacheData.invalidate("Blit pixel difference");
     }
 
     // cleanup
@@ -239,10 +258,8 @@ void BBDX::BlurCache::drawCached(const KWin::Rect &scaledBackgroundRect, const K
     if (!renderInfo.cache.valid) {
         renderInfo.cache.valid = true;
 
-        // store current blit for next draw
-        // this is kinda ugly but there doesn't
-        // seem to be a simpler way to just deep copy a texture
-        renderInfo.cache.prevBlitTexture = KWin::GLTexture::upload(renderInfo.textures[0]->toImage());
+        // clone current blit for next draw
+        renderInfo.cache.prevBlitTexture = cloneBlitTexture(renderInfo);
     } else {
         renderInfo.cache.hits += 1;
     }
@@ -252,4 +269,29 @@ void BBDX::BlurCache::drawToCache(const KWin::BlurRenderData &renderInfo, KWin::
     KWin::GLFramebuffer::pushFramebuffer(renderInfo.cache.framebuffer.get());
     vbo->draw(GL_TRIANGLES, 6, 6);
     KWin::GLFramebuffer::popFramebuffer();
+}
+
+std::unique_ptr<KWin::GLTexture> BBDX::BlurCache::cloneBlitTexture(KWin::BlurRenderData &renderInfo) const {
+    KWin::GLFramebuffer *sourceBuffer = renderInfo.framebuffers[0].get();
+    KWin::GLTexture *sourceTexture = sourceBuffer->colorAttachment();
+
+    auto texture = KWin::GLTexture::allocate(sourceTexture->internalFormat(), sourceTexture->size());
+    if (!texture) {
+        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to allocate an offscreen texture";
+        return nullptr;
+    }
+    texture->setFilter(GL_LINEAR);
+    texture->setWrapMode(GL_CLAMP_TO_EDGE);
+
+    auto framebuffer = std::make_unique<KWin::GLFramebuffer>(texture.get());
+    if (!framebuffer->valid()) {
+        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to create an offscreen framebuffer";
+        return nullptr;
+    }
+
+    KWin::GLFramebuffer::pushFramebuffer(sourceBuffer);
+    framebuffer->blitFromFramebuffer();
+    KWin::GLFramebuffer::popFramebuffer();
+
+    return texture;
 }
