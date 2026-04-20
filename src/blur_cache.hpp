@@ -51,7 +51,7 @@ struct BlurCacheData {
     // helper to invalidate cache, reset the hit counter
     // and print debug stats
     // returns true if invalidated
-    bool invalidate(QString reason = "");
+    bool invalidate(QStringView reason);
 };
 
 class BlurCache {

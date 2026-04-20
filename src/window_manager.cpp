@@ -266,13 +266,13 @@ void BBDX::WindowManager::triggerBlurRegionUpdate(KWin::EffectWindow *w) const {
     m_effect->updateBlurRegion(w);
 }
 
-bool BBDX::WindowManager::invalidateBlurCache(KWin::EffectWindow *w) const {
+bool BBDX::WindowManager::invalidateBlurCache(KWin::EffectWindow *w, QStringView reason) const {
     bool anyInvalidated{false};
 
     if (auto it = m_effect->m_windows.find(w); it != m_effect->m_windows.end()) {
         KWin::BlurEffectData &blurInfo = it->second;
         for (auto &[_, renderInfo] : blurInfo.render) {
-            if (renderInfo.cache.invalidate()) {
+            if (renderInfo.cache.invalidate(reason)) {
                 anyInvalidated = true;
             }
         }

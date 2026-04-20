@@ -9,6 +9,7 @@
 #include <opengl/eglcontext.h>
 #include <opengl/glframebuffer.h>
 #include <opengl/glshadermanager.h>
+#include <qobject.h>
 
 #if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
 #  include "kwin_compat_6_5.hpp"
@@ -28,7 +29,7 @@ Q_LOGGING_CATEGORY(BLUR_CACHE, "kwin_effect_better_blur_dx.blur_cache", QtInfoMs
 // 5 seems like a sane default to still provide the metric.
 constexpr uint CACHE_HITS_LOGGED_MIN = 5;
 
-bool BBDX::BlurCacheData::invalidate(QString reason) {
+bool BBDX::BlurCacheData::invalidate(QStringView reason) {
     if (!valid) {
         return false;
     }
@@ -111,7 +112,7 @@ void BBDX::BlurCache::maybeInvalidateCache(KWin::BlurRenderData &renderInfo,
     auto &cacheData = renderInfo.cache;
     if (!cacheData.opacity.has_value() || !qFuzzyCompare(cacheData.opacity.value(), opacity)) {
         cacheData.opacity = opacity;
-        cacheData.invalidate();
+        cacheData.invalidate(QStringLiteral("Opacity changed"));
     }
 
     // Fast path in case we invalidated earlier.
@@ -127,17 +128,17 @@ void BBDX::BlurCache::maybeInvalidateCache(KWin::BlurRenderData &renderInfo,
 
     // previous blit texture is definitely different
     if (!prevBlitTexture) {
-        cacheData.invalidate("No prevBlitTexture");
+        cacheData.invalidate(QStringLiteral("No prevBlitTexture"));
         return;
     }
 
     if (prevBlitTexture->size() != blitTexture->size()) {
-        cacheData.invalidate("Blit texture size mismatch");
+        cacheData.invalidate(QStringLiteral("Blit texture size mismatch"));
         return;
     }
 
     if (prevBlitTexture->internalFormat() != blitTexture->internalFormat()) {
-        cacheData.invalidate("Blit texture format mismatch");
+        cacheData.invalidate(QStringLiteral("Blit texture format mismatch"));
         return;
     }
 
@@ -178,7 +179,7 @@ void BBDX::BlurCache::maybeInvalidateCache(KWin::BlurRenderData &renderInfo,
     GLuint anyPixelsDifferent;
     glGetQueryObjectuiv(query, GL_QUERY_RESULT, &anyPixelsDifferent);
     if (anyPixelsDifferent == GL_TRUE) {
-        cacheData.invalidate("Blit pixel difference");
+        cacheData.invalidate(QStringLiteral("Blit pixel difference"));
     }
 
     // cleanup

@@ -237,7 +237,7 @@ private:
 
     std::unique_ptr<BBDX::WindowManager> m_windowManager{};
     friend void BBDX::WindowManager::triggerBlurRegionUpdate(KWin::EffectWindow *w) const;
-    friend bool BBDX::WindowManager::invalidateBlurCache(KWin::EffectWindow *w) const;
+    friend bool BBDX::WindowManager::invalidateBlurCache(KWin::EffectWindow *w, QStringView reason) const;
     std::unique_ptr<BBDX::BlurCache> m_blurCache{};
     std::unique_ptr<BBDX::RefractionPass> m_refractionPass{};
     std::unique_ptr<BBDX::RoundedCornersPass> m_roundedCornersPass{};
