@@ -13,7 +13,7 @@ void main() {
 
     // discard (almost) identical pixels
     if (distance(colorOld, colorNew) < 0.0001) {
-        discard; 
+        discard;
     }
 
     // not discarded -> different
