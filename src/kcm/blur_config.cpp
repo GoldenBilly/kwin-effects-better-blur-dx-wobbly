@@ -85,6 +85,20 @@ void BlurEffectConfig::setupContextualHelp()
 
 void BlurEffectConfig::setupSpinboxSliderSync()
 {
+    // Blur Strength
+    ui.spinboxBlurStrength->setValue(ui.kcfg_BlurStrength->value());
+    connect(ui.kcfg_BlurStrength, &QSlider::valueChanged, this, [this](int value) {
+            if (ui.spinboxBlurStrength->value() != value) ui.spinboxBlurStrength->setValue(value); });
+    connect(ui.spinboxBlurStrength, &QSpinBox::valueChanged, this, [this](int value) {
+            if (ui.kcfg_BlurStrength->value() != value) ui.kcfg_BlurStrength->setValue(value); });
+
+    // Noise Strength
+    ui.spinboxNoiseStrength->setValue(ui.kcfg_NoiseStrength->value());
+    connect(ui.kcfg_NoiseStrength, &QSlider::valueChanged, this, [this](int value) {
+            if (ui.spinboxNoiseStrength->value() != value) ui.spinboxNoiseStrength->setValue(value); });
+    connect(ui.spinboxNoiseStrength, &QSpinBox::valueChanged, this, [this](int value) {
+            if (ui.kcfg_NoiseStrength->value() != value) ui.kcfg_NoiseStrength->setValue(value); });
+
     // Brightness
     ui.spinboxBrightness->setValue(ui.kcfg_Brightness->value());
     connect(ui.kcfg_Brightness, &QSlider::valueChanged, this, [this](int value) {
