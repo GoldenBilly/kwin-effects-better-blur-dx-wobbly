@@ -42,34 +42,6 @@ BBDX::RefractionPass::RefractionPass() {
         m_rectangular.refractionTextureRepeatModeLocation = m_rectangular.shader->uniformLocation("refractionTextureRepeatMode");
         m_rectangular.refractionModeLocation = m_rectangular.shader->uniformLocation("refractionMode");
     }
-
-    m_rounded.shader = KWin::ShaderManager::instance()->generateShaderFromFile(
-            KWin::ShaderTrait::MapTexture,
-            QStringLiteral(":/effects/better_blur_dx/shaders/onscreen_rounded.vert"),
-            QStringLiteral(":/effects/better_blur_dx/shaders/refraction_rounded.frag"));
-
-    if (!m_rounded.shader) {
-        qCWarning(REFRACTION_PASS) << BBDX::LOG_PREFIX << "Failed to load refraction pass shader";
-        return;
-    } else {
-        // contrast parameters
-        m_rounded.mvpMatrixLocation = m_rounded.shader->uniformLocation("modelViewProjectionMatrix");
-        m_rounded.colorMatrixLocation = m_rounded.shader->uniformLocation("colorMatrix");
-        m_rounded.offsetLocation = m_rounded.shader->uniformLocation("offset");
-        m_rounded.halfpixelLocation = m_rounded.shader->uniformLocation("halfpixel");
-        m_rounded.boxLocation = m_rounded.shader->uniformLocation("box");
-        m_rounded.cornerRadiusLocation = m_rounded.shader->uniformLocation("cornerRadius");
-        m_rounded.opacityLocation = m_rounded.shader->uniformLocation("opacity");
-        // refraction parameters
-        m_rounded.refractionRectSizeLocation = m_rounded.shader->uniformLocation("refractionRectSize");
-        m_rounded.refractionEdgeSizePixelsLocation = m_rounded.shader->uniformLocation("refractionEdgeSizePixels");
-        m_rounded.refractionCornerRadiusPixelsLocation = m_rounded.shader->uniformLocation("refractionCornerRadiusPixels");
-        m_rounded.refractionStrengthLocation = m_rounded.shader->uniformLocation("refractionStrength");
-        m_rounded.refractionNormalPowLocation = m_rounded.shader->uniformLocation("refractionNormalPow");
-        m_rounded.refractionRGBFringingLocation = m_rounded.shader->uniformLocation("refractionRGBFringing");
-        m_rounded.refractionTextureRepeatModeLocation = m_rounded.shader->uniformLocation("refractionTextureRepeatMode");
-        m_rounded.refractionModeLocation = m_rounded.shader->uniformLocation("refractionMode");
-    }
 }
 
 void BBDX::RefractionPass::reconfigure() {
@@ -114,15 +86,6 @@ void BBDX::RefractionPass::reconfigure() {
     m_mode = config->refractionMode();
 }
 
-bool BBDX::RefractionPass::pushShaderRounded() const {
-    if (!enabled())
-        return false;
-
-    KWin::ShaderManager::instance()->pushShader(m_rounded.shader.get());
-
-    return true;
-}
-
 bool BBDX::RefractionPass::pushShaderRectangular() const {
     if (!enabled())
         return false;
@@ -132,42 +95,6 @@ bool BBDX::RefractionPass::pushShaderRectangular() const {
     return true;
 }
 
-bool BBDX::RefractionPass::setParametersRounded(const QMatrix4x4 &projectionMatrix,
-                                         const QMatrix4x4 &colorMatrix,
-                                         const QVector2D &halfpixel,
-                                         const float offset,
-                                         const QVector4D &box,
-                                         const QVector4D &cornerRadius,
-                                         const qreal modulation,
-                                         const QRect &scaledBackgroundRect) const {
-
-    if (!enabled())
-        return false;
-
-    // contrast parameters
-    m_rounded.shader->setUniform(m_rounded.mvpMatrixLocation, projectionMatrix);
-    m_rounded.shader->setUniform(m_rounded.colorMatrixLocation, colorMatrix);
-    m_rounded.shader->setUniform(m_rounded.halfpixelLocation, halfpixel);
-    m_rounded.shader->setUniform(m_rounded.offsetLocation, offset);
-    m_rounded.shader->setUniform(m_rounded.boxLocation, box);
-    m_rounded.shader->setUniform(m_rounded.cornerRadiusLocation, cornerRadius);
-    m_rounded.shader->setUniform(m_rounded.opacityLocation, modulation);
-    // refraction parameters
-    m_rounded.shader->setUniform(m_rounded.refractionRectSizeLocation,
-                                 QVector2D(scaledBackgroundRect.width(), scaledBackgroundRect.height()));
-    m_rounded.shader->setUniform(m_rounded.refractionEdgeSizePixelsLocation,
-                                 std::min(static_cast<float>(m_edgeSizePixels),
-                                          static_cast<float>(std::min(scaledBackgroundRect.width() / 2,
-                                                                      scaledBackgroundRect.height() / 2))));
-    m_rounded.shader->setUniform(m_rounded.refractionCornerRadiusPixelsLocation, static_cast<float>(m_cornerRadiusPixels));
-    m_rounded.shader->setUniform(m_rounded.refractionStrengthLocation, static_cast<float>(m_strength));
-    m_rounded.shader->setUniform(m_rounded.refractionNormalPowLocation, static_cast<float>(m_normalPow));
-    m_rounded.shader->setUniform(m_rounded.refractionRGBFringingLocation, static_cast<float>(m_RGBFringing));
-    m_rounded.shader->setUniform(m_rounded.refractionTextureRepeatModeLocation, m_textureRepeatMode);
-    m_rounded.shader->setUniform(m_rounded.refractionModeLocation, m_mode);
-
-    return true;
-}
 
 bool BBDX::RefractionPass::setParametersRectangular(const QMatrix4x4 &projectionMatrix,
                                          const QMatrix4x4 &colorMatrix,

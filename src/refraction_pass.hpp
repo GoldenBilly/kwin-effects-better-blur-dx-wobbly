@@ -31,29 +31,7 @@ private:
         int refractionModeLocation;
     };
 
-    struct Rounded {
-        std::unique_ptr<KWin::GLShader> shader;
-        // contrast parameters
-        int mvpMatrixLocation;
-        int colorMatrixLocation;
-        int offsetLocation;
-        int halfpixelLocation;
-        int boxLocation;
-        int cornerRadiusLocation;
-        int opacityLocation;
-        // refraction parameters
-        int refractionRectSizeLocation;
-        int refractionEdgeSizePixelsLocation;
-        int refractionCornerRadiusPixelsLocation;
-        int refractionStrengthLocation;
-        int refractionNormalPowLocation;
-        int refractionRGBFringingLocation;
-        int refractionTextureRepeatModeLocation;
-        int refractionModeLocation;
-    };
-
     Rectangular m_rectangular{};
-    Rounded m_rounded{};
 
     bool m_enabled{false};
 
@@ -80,7 +58,7 @@ public:
     /**
      * Check if pass is ready i.e. all shaders loaded
      */
-    bool ready() const { return m_rectangular.shader && m_rounded.shader; }
+    bool ready() const { return !!m_rectangular.shader; }
 
     /**
      * Check if refraction pass is enabled
@@ -92,22 +70,7 @@ public:
      *
      * returns false if refraction is disabled
      */
-    bool pushShaderRounded() const;
     bool pushShaderRectangular() const;
-
-    /**
-     * Set GLSL parameters, rounded version
-     *
-     * returns false if refraction is disabled
-     */
-    bool setParametersRounded(const QMatrix4x4 &projectionMatrix,
-                              const QMatrix4x4 &colorMatrix,
-                              const QVector2D &halfpixel,
-                              const float offset,
-                              const QVector4D &box,
-                              const QVector4D &cornerRadius,
-                              const qreal opacity,
-                              const QRect &scaledBackgroundRect) const;
 
     /**
      * Set GLSL parameters, rectangular version
