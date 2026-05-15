@@ -68,6 +68,8 @@ private:
         int mvpMatrixLocation;
     } m_texturePass;
 
+    bool m_glQueryAvailable{true};
+
 public:
     /**
      * Loads and sets up shaders
@@ -89,7 +91,7 @@ public:
      *
      * If no "easy" properties exist resorts to comparing the blit textures
      */
-    void maybeInvalidateCache(KWin::BlurRenderData &renderInfo, qreal opacity, KWin::GLVertexBuffer *vbo) const;
+    void maybeInvalidateCache(KWin::BlurRenderData &renderInfo, qreal opacity, KWin::GLVertexBuffer *vbo);
 
     /**
      * Injects the geometry used for the cache, in logical pixels

@@ -102,7 +102,7 @@ void BBDX::BlurCache::updateBlurCacheDataBuffers(KWin::BlurRenderData &renderInf
 
 void BBDX::BlurCache::maybeInvalidateCache(KWin::BlurRenderData &renderInfo,
                                            qreal opacity,
-                                           KWin::GLVertexBuffer *vbo) const {
+                                           KWin::GLVertexBuffer *vbo) {
     auto &cacheData = renderInfo.cache;
     if (!cacheData.opacity.has_value() || !qFuzzyCompare(cacheData.opacity.value(), opacity)) {
         cacheData.opacity = opacity;
@@ -133,6 +133,13 @@ void BBDX::BlurCache::maybeInvalidateCache(KWin::BlurRenderData &renderInfo,
 
     if (prevBlitTexture->internalFormat() != blitTexture->internalFormat()) {
         cacheData.invalidate(QStringLiteral("Blit texture format mismatch"));
+        return;
+    }
+
+    // fast path in case we already determined we
+    // can't perform texture comparison
+    if (!m_glQueryAvailable) [[unlikely]] {
+        cacheData.invalidate(QStringLiteral("GL_ANY_SAMPLES_PASSED query not available - assuming blit pixel difference"));
         return;
     }
 
@@ -172,6 +179,8 @@ void BBDX::BlurCache::maybeInvalidateCache(KWin::BlurRenderData &renderInfo,
     if (glGetError() == GL_INVALID_ENUM) [[unlikely]] {
         qCWarning(BLUR_CACHE) << "OpenGL error: GL_ANY_SAMPLES_PASSED query not available";
         cacheData.invalidate(QStringLiteral("GL_ANY_SAMPLES_PASSED query not available - assuming blit pixel difference"));
+        m_glQueryAvailable = false;
+
         glEndQuery(GL_ANY_SAMPLES_PASSED);
         goto cleanup;
     }
