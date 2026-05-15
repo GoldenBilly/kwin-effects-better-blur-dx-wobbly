@@ -116,11 +116,6 @@ void BBDX::BlurCacheLRU::select() {
         }
     }
 
-    qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
-                        << "Selecting BlurCacheEntry:" << m_windowClass << "\n"
-                        << "PID:" << m_windowPID << "\n"
-                        << "Index:" << idx;
-
     m_next = 0;
     m_valid = selected;
     selected->priority = 0;
@@ -136,7 +131,8 @@ void BBDX::BlurCacheLRU::add(std::unique_ptr<BlurCacheEntry> entry) {
 
     qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
                         << "Adding BlurCacheEntry:" << m_windowClass << "\n"
-                        << "PID:" << m_windowPID << "\n";
+                        << "PID:" << m_windowPID << "\n"
+                        << "Entries:" << m_entries.size() << "of" << m_max;
 
     for (size_t i = 1; i < m_entries.size(); i++) {
         m_entries[i]->priority += 1;
