@@ -182,12 +182,6 @@ public:
      * vbo->draw() wrapper to draw into BlurCacheData of the provided renderInfo
      */
     void drawToCache(KWin::BlurRenderData &renderInfo, KWin::GLVertexBuffer *vbo) const;
-
-    /**
-     * Clone the blit texture (expected at renderInfo.framebuffers[0])
-     * May be nullptr if clone failed
-     */
-    std::unique_ptr<KWin::GLTexture> cloneBlitTexture(KWin::BlurRenderData &renderInfo) const;
 };
 
 } // namespace BBDX

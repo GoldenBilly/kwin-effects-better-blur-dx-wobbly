@@ -384,28 +384,3 @@ void BBDX::BlurCache::drawToCache(KWin::BlurRenderData &renderInfo, KWin::GLVert
     vbo->draw(GL_TRIANGLES, 6, 6);
     KWin::GLFramebuffer::popFramebuffer();
 }
-
-std::unique_ptr<KWin::GLTexture> BBDX::BlurCache::cloneBlitTexture(KWin::BlurRenderData &renderInfo) const {
-    KWin::GLFramebuffer *sourceBuffer = renderInfo.framebuffers[0].get();
-    KWin::GLTexture *sourceTexture = sourceBuffer->colorAttachment();
-
-    auto texture = KWin::GLTexture::allocate(sourceTexture->internalFormat(), sourceTexture->size());
-    if (!texture) {
-        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to allocate an offscreen texture";
-        return nullptr;
-    }
-    texture->setFilter(GL_LINEAR);
-    texture->setWrapMode(GL_CLAMP_TO_EDGE);
-
-    auto framebuffer = std::make_unique<KWin::GLFramebuffer>(texture.get());
-    if (!framebuffer->valid()) {
-        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to create an offscreen framebuffer";
-        return nullptr;
-    }
-
-    KWin::GLFramebuffer::pushFramebuffer(sourceBuffer);
-    framebuffer->blitFromFramebuffer();
-    KWin::GLFramebuffer::popFramebuffer();
-
-    return texture;
-}
