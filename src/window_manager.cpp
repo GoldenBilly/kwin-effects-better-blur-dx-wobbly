@@ -19,6 +19,9 @@
 #  include <core/output.h>
 #  include <core/region.h>
 #endif
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
+#  include "kwin_compat_6_6.hpp"
+#endif
 
 #include <QList>
 #include <QLoggingCategory>
@@ -160,6 +163,10 @@ void BBDX::WindowManager::reconfigure() {
 }
 
 void BBDX::WindowManager::refreshMaximizedState(BBDX::Window *window) const {
+    /**
+     * TODO: convert to RegionF
+     */
+
     const KWin::EffectWindow *w = window->effectwindow();
 
     const KWin::LogicalOutput* screen = w->screen();
@@ -304,7 +311,7 @@ bool BBDX::WindowManager::windowIsBlurred(const KWin::EffectWindow *w) const {
     return window->isBlurred();
 }
 
-void BBDX::WindowManager::getFinalBlurRegion(const KWin::EffectWindow *w, std::optional<KWin::Region> &content, std::optional<KWin::Region> &frame) const {
+void BBDX::WindowManager::getFinalBlurRegion(const KWin::EffectWindow *w, std::optional<KWin::RegionF> &content, std::optional<KWin::RegionF> &frame) const {
     const auto window = findWindow(w);
     if (!window)
         return;

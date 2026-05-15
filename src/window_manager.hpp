@@ -12,6 +12,9 @@
 #  include <core/output.h>
 #  include <core/region.h>
 #endif
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
+#  include "kwin_compat_6_6.hpp"
+#endif
 
 #include <QList>
 #include <QObject>
@@ -141,7 +144,7 @@ public:
      * Forwarded to BBDX::Window::getFinalBlurRegion() if w is managed
      * else does nothing.
      */
-    void getFinalBlurRegion(const KWin::EffectWindow *w, std::optional<KWin::Region> &content, std::optional<KWin::Region> &frame) const;
+    void getFinalBlurRegion(const KWin::EffectWindow *w, std::optional<KWin::RegionF> &content, std::optional<KWin::RegionF> &frame) const;
 
     /**
      * Get effective border radius for requested window,

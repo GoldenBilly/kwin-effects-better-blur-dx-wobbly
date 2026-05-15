@@ -1,6 +1,7 @@
+#include "window.hpp"
+
 #include "kwin_version.hpp"
 #include "utils.h"
-#include "window.hpp"
 #include "window_manager.hpp"
 
 #include <KDecoration3/Decoration>
@@ -14,6 +15,9 @@
 #  include "kwin_compat_6_5.hpp"
 #else
 #  include <core/region.h>
+#endif
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
+#  include "kwin_compat_6_6.hpp"
 #endif
 
 #include <QEasingCurve>
@@ -162,8 +166,8 @@ void BBDX::Window::updateForceBlurRegion() {
         return;
     }
 
-    std::optional<KWin::Region> content{};
-    std::optional<KWin::Region> frame{};
+    std::optional<KWin::RegionF> content{};
+    std::optional<KWin::RegionF> frame{};
 
     // On X11, EffectWindow::contentsRect() includes GTK's client-side shadows, while on Wayland, it doesn't.
     // The content region is translated by EffectWindow::contentsRect() in BlurEffect::blurRegion, causing the
@@ -173,15 +177,23 @@ void BBDX::Window::updateForceBlurRegion() {
                               effectwindow()->frameGeometry() != effectwindow()->bufferGeometry();
     if (!isX11WithCSD) {
         // empty QRegion -> full window
-        content = KWin::Region();
+        content = KWin::RegionF();
 
         // only decorations in this case
         if (m_windowManager->blurDecorations() && m_effectwindow->decoration()) {
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 7)
             frame = KWin::Region(KWin::Rect(effectwindow()->decoration()->rect().toAlignedRect())) - effectwindow()->contentsRect().toRect();
+#else
+            frame = KWin::RegionF(effectwindow()->decoration()->rect()) - effectwindow()->contentsRect();
+#endif
         }
     } else {
         // frame is full window
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 7)
         frame = KWin::Region(KWin::Rect(m_effectwindow->frameGeometry().translated(-m_effectwindow->x(), -m_effectwindow->y()).toRect()));
+#else
+        frame = KWin::RegionF(m_effectwindow->frameGeometry().translated(-m_effectwindow->x(), -m_effectwindow->y()));
+#endif
     }
 
     // unchanged
@@ -335,7 +347,7 @@ void BBDX::Window::reconfigure() {
     updateForceBlurRegion();
 }
 
-void BBDX::Window::getFinalBlurRegion(std::optional<KWin::Region> &content, std::optional<KWin::Region> &frame) {
+void BBDX::Window::getFinalBlurRegion(std::optional<KWin::RegionF> &content, std::optional<KWin::RegionF> &frame) {
     unsigned int oldBlurOriginMask = m_blurOriginMask;
 
     // If we already have a blur region at this point

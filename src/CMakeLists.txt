@@ -21,6 +21,7 @@ if(BETTERBLUR_X11)
         KDecoration3::KDecoration
         KF6::ConfigGui
         KWinX11::kwin
+        ${XCB_LIBRARIES}
     )
     target_compile_definitions(better_blur_dx PRIVATE
                                KWIN_VERSION_MAJOR=${KWin_VERSION_MAJOR}
@@ -34,6 +35,7 @@ else()
         KDecoration3::KDecoration
         KF6::ConfigGui
         KWin::kwin
+        ${XCB_LIBRARIES}
     )
     target_compile_definitions(better_blur_dx PRIVATE
                                KWIN_VERSION_MAJOR=${KWin_VERSION_MAJOR}

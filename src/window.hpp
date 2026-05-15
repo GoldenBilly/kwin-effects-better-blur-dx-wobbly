@@ -13,6 +13,9 @@
 #else
 #  include <core/region.h>
 #endif
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
+#  include "kwin_compat_6_6.hpp"
+#endif
 
 namespace KWin {
     class BorderRadius;
@@ -66,8 +69,8 @@ private:
     qreal m_userBorderRadius{0.0};
 
     // if force blurred, contain content/frame of the blur region
-    std::optional<KWin::Region> m_forceBlurContent{};
-    std::optional<KWin::Region> m_forceBlurFrame{};
+    std::optional<KWin::RegionF> m_forceBlurContent{};
+    std::optional<KWin::RegionF> m_forceBlurFrame{};
 
     // track whether this window requested a blur region
     // and where it came from
@@ -140,8 +143,8 @@ public:
      * getters
      */
     KWin::EffectWindow* effectwindow() const { return m_effectwindow; }
-    std::optional<KWin::Region> forceBlurContent() const { return m_forceBlurContent; };
-    std::optional<KWin::Region> forceBlurFrame() const { return m_forceBlurFrame; };
+    std::optional<KWin::RegionF> forceBlurContent() const { return m_forceBlurContent; };
+    std::optional<KWin::RegionF> forceBlurFrame() const { return m_forceBlurFrame; };
     bool shouldBlurWhileTransformed() const;
 
     /**
@@ -156,7 +159,7 @@ public:
      * If values already exists keeps them and sets
      * m_blurOriginMask appropriately, else writes the current force blur region
      */
-    void getFinalBlurRegion(std::optional<KWin::Region> &content, std::optional<KWin::Region> &frame);
+    void getFinalBlurRegion(std::optional<KWin::RegionF> &content, std::optional<KWin::RegionF> &frame);
 
     /**
      * Get the effective border radius

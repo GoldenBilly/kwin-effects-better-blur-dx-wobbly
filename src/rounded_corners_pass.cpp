@@ -1,6 +1,15 @@
 #include "rounded_corners_pass.hpp"
-#include "utils.h"
+
 #include "blur.h"
+#include "kwin_version.hpp"
+#include "utils.h"
+
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
+#  include "kwin_compat_6_5.hpp"
+#else
+#  include <core/rect.h>
+#  include <core/region.h>
+#endif
 
 #include <core/pixelgrid.h>
 #include <core/renderviewport.h>
@@ -54,18 +63,29 @@ void BBDX::RoundedCornersPass::apply(const KWin::BorderRadius &cornerRadius,
         // should contain the raw un-blurred pixels
         const auto &read = renderInfo.framebuffers[0];
 
-        const QRectF transformedRect = QRectF{
+        const KWin::RectF transformedRect = KWin::RectF{
             w->frameGeometry().x() + data.xTranslation(),
             w->frameGeometry().y() + data.yTranslation(),
             w->frameGeometry().width() * data.xScale(),
             w->frameGeometry().height() * data.yScale(),
         };
-        const QRectF nativeBox = KWin::snapToPixelGridF(KWin::scaledRect(transformedRect, viewport.scale()))
-                                     .translated(-scaledBackgroundRect.topLeft());
+# if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
+        const KWin::RectF nativeBox = KWin::snapToPixelGridF(KWin::scaledRect(transformedRect, viewport.scale()))
+                                .translated(-scaledBackgroundRect.topLeft());
+#else
+        const KWin::RectF nativeBox = transformedRect
+                                    .scaled(viewport.scale())
+                                    .rounded()
+                                    .translated(-scaledBackgroundRect.topLeft());
+#endif
         const KWin::BorderRadius nativeCornerRadius = cornerRadius.scaled(viewport.scale()).rounded();
 
         m_shader->setUniform(m_mvpMatrixLocation, projectionMatrix);
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
         m_shader->setUniform(m_boxLocation, QVector4D(nativeBox.x() + nativeBox.width() * 0.5, nativeBox.y() + nativeBox.height() * 0.5, nativeBox.width() * 0.5, nativeBox.height() * 0.5));
+#else
+        m_shader->setUniform(m_boxLocation, QVector4D(nativeBox.horizontalCenter(), nativeBox.verticalCenter(), nativeBox.width() * 0.5, nativeBox.height() * 0.5));
+#endif
         m_shader->setUniform(m_cornerRadiusLocation, nativeCornerRadius.toVector());
 
         BBDX::setTextureSwizzle(read->colorAttachment());

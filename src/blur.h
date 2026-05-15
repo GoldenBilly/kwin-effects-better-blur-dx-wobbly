@@ -22,6 +22,9 @@
 #  include <core/rect.h>
 #  include <core/region.h>
 #endif
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
+#  include "kwin_compat_6_6.hpp"
+#endif
 
 #include <effect/effect.h>
 #include <effect/effectwindow.h>
@@ -41,8 +44,10 @@
 namespace KWin
 {
 
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
 class BlurManagerInterface;
 class ContrastManagerInterface;
+#endif
 
 struct BlurRenderData
 {
@@ -57,10 +62,10 @@ struct BlurRenderData
 struct BlurEffectData
 {
     /// The region that should be blurred behind the window
-    std::optional<Region> content;
+    std::optional<RegionF> content;
 
     /// The region that should be blurred behind the frame
-    std::optional<Region> frame;
+    std::optional<RegionF> frame;
 
     /**
      * The render data per render view, as they can have different
@@ -96,11 +101,17 @@ public:
     static bool enabledByDefault();
 
     void reconfigure(ReconfigureFlags flags) override;
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
     void prePaintScreen(ScreenPrePaintData &data, std::chrono::milliseconds presentTime) override;
+#else
+    void prePaintScreen(ScreenPrePaintData &data) override;
+#endif
 #if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
     void prePaintWindow(EffectWindow *w, WindowPrePaintData &data, std::chrono::milliseconds presentTime) override;
-#else
+#elif KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
     void prePaintWindow(RenderView *view, EffectWindow *w, WindowPrePaintData &data, std::chrono::milliseconds presentTime) override;
+#else
+    void prePaintWindow(RenderView *view, EffectWindow *w, WindowPrePaintData &data) override;
 #endif
     void drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &deviceRegion, WindowPaintData &data) override;
 
@@ -129,8 +140,8 @@ public Q_SLOTS:
 
 private:
     void initBlurStrengthValues();
-    Region blurRegion(EffectWindow *w) const;
-    Region decorationBlurRegion(const EffectWindow *w) const;
+    RegionF blurRegion(EffectWindow *w) const;
+    RegionF decorationBlurRegion(const EffectWindow *w) const;
     bool decorationSupportsBlurBehind(const EffectWindow *w) const;
     bool shouldBlur(const EffectWindow *w, int mask, const WindowPaintData &data) const;
     void updateBlurRegion(EffectWindow *w);
@@ -223,14 +234,18 @@ private:
     QList<BlurValuesStruct> blurStrengthValues;
 
     QMap<EffectWindow *, QMetaObject::Connection> windowBlurChangedConnections;
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
     QMap<EffectWindow *, QMetaObject::Connection> windowContrastChangedConnections;
+#endif
     std::unordered_map<EffectWindow *, BlurEffectData> m_windows;
 
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
     static BlurManagerInterface *s_blurManager;
     static QTimer *s_blurManagerRemoveTimer;
 
     static ContrastManagerInterface *s_contrastManager;
     static QTimer *s_contrastManagerRemoveTimer;
+#endif
 
     // BBDX Mixins
     bool m_forceContrastParams{false};
