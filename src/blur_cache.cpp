@@ -306,6 +306,8 @@ void BBDX::BlurCache::selectCacheEntry(KWin::BlurRenderData &renderInfo,
         GLuint anyPixelsDifferent;
         glGetQueryObjectuiv(query, GL_QUERY_RESULT, &anyPixelsDifferent);
         if (anyPixelsDifferent == GL_FALSE) {
+            // no need to break; this causes BlurCacheLRU::next()
+            // to return nullptr on the next iteration
             cache.select();
         }
 
