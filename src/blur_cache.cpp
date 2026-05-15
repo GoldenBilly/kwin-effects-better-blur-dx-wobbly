@@ -5,10 +5,10 @@
 #include "utils.h"
 
 #include <epoxy/gl.h>
-#include <qloggingcategory.h>
 #include <sys/types.h>
 
 #include <core/renderviewport.h>
+#include <effect/effectwindow.h>
 #include <opengl/eglcontext.h>
 #include <opengl/glframebuffer.h>
 #include <opengl/glshadermanager.h>
@@ -116,7 +116,10 @@ void BBDX::BlurCacheLRU::select() {
         }
     }
 
-    qCDebug(BLUR_CACHE) << "Selected BlurCacheEntry:" << idx;
+    qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
+                        << "Selecting BlurCacheEntry:" << m_windowClass << "\n"
+                        << "PID:" << m_windowPID << "\n"
+                        << "Index:" << idx;
 
     m_next = 0;
     m_valid = selected;
@@ -131,7 +134,9 @@ void BBDX::BlurCacheLRU::add(std::unique_ptr<BlurCacheEntry> entry) {
     m_next = 0;
     select();
 
-    qCDebug(BLUR_CACHE) << "Added new BlurCacheEntry";
+    qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
+                        << "Adding BlurCacheEntry:" << m_windowClass << "\n"
+                        << "PID:" << m_windowPID << "\n";
 
     for (size_t i = 1; i < m_entries.size(); i++) {
         m_entries[i]->priority += 1;
@@ -141,7 +146,8 @@ void BBDX::BlurCacheLRU::add(std::unique_ptr<BlurCacheEntry> entry) {
         for (auto it = m_entries.begin(); it != m_entries.end(); it++) {
             if ((*it)->priority >= m_max) {
                 qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
-                                    << "Dropping old BlurCacheEntry\n"
+                                    << "Dropping old BlurCacheEntry:" << m_windowClass << "\n"
+                                    << "PID:" << m_windowPID << "\n"
                                     << "Hits:" << (*it)->hits;
 
                 m_entries.erase(it);
@@ -151,30 +157,30 @@ void BBDX::BlurCacheLRU::add(std::unique_ptr<BlurCacheEntry> entry) {
     }
 }
 
-void BBDX::BlurCacheLRU::clear() {
+void BBDX::BlurCacheLRU::invalidate(QStringView reason) {
+    uint totalHits{0};
+    for (auto &entry : m_entries) {
+        totalHits += entry->hits;
+    }
+
+    qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
+                        << "Invalidating cache:" << m_windowClass << "\n"
+                        << "PID:" << m_windowPID << "\n"
+                        << "Hits:" << totalHits << "over" << m_entries.size() << "cache entries" << "\n"
+                        << "Reason:" << reason;
+
     m_entries.clear();
     reset();
 }
 
-bool BBDX::BlurCacheData::invalidate(QStringView reason) {
-    QString windowClass;
-    pid_t windowPID;
-    if (w) [[likely]] {
-        windowClass = w->windowClass();
-        windowPID = w->pid();
-    } else {
-        windowClass = QStringLiteral("unknown window");
-        windowPID = 0;
+void BBDX::BlurCacheLRU::setWindow(KWin::EffectWindow* w) {
+    if (m_window) {
+        return;
     }
 
-    qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Cache invalidated:" << windowClass << "\n"
-                        << "PID:" << windowPID << "\n"
-                        << "Hits:"   << hits << "\n"
-                        << "Reason:" << reason;
-
-    lru.clear();
-
-    return true;
+    m_window = w;
+    m_windowClass = m_window->windowClass();
+    m_windowPID = m_window->pid();
 }
 
 BBDX::BlurCache::BlurCache() {
@@ -284,7 +290,6 @@ void BBDX::BlurCache::selectCacheEntry(KWin::BlurRenderData &renderInfo,
         GLuint anyPixelsDifferent;
         glGetQueryObjectuiv(query, GL_QUERY_RESULT, &anyPixelsDifferent);
         if (anyPixelsDifferent == GL_FALSE) {
-            qCDebug(BLUR_CACHE) << "Found cache entry for" << cacheData.w->windowClass();
             cacheData.lru.select();
         }
 

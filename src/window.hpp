@@ -192,7 +192,7 @@ public:
     /**
      * Invalidate the blur cache for this window
      */
-    bool invalidateBlurCache(QStringView reason) const;
+    void invalidateBlurCache(QStringView reason) const;
 
     /**
      * operator to facilitate logging of windows

@@ -62,6 +62,10 @@ private:
     size_t m_next{0};
     BlurCacheEntry* m_valid{nullptr};
 
+    KWin::EffectWindow* m_window{nullptr};
+    QString m_windowClass{"unknown unknown"};
+    pid_t m_windowPID{0};
+
 public:
     explicit BlurCacheLRU(size_t max = 5)
         : m_max{max}
@@ -95,33 +99,29 @@ public:
     void add(std::unique_ptr<BlurCacheEntry> entry);
 
     /**
-     * Clear all cache entries
-     */
-    void clear();
-
-    /**
      * If a valid cache entry was selected get a pointer to it, else nullptr
      */
     BlurCacheEntry* valid() { return m_valid; }
+
+    /**
+     * Explicitly clear all cache entries
+     * and print sats to debug log
+     */
+    void invalidate(QStringView reason);
+
+    /**
+     * Set window using this cache for logging purposes
+     * Locked once set
+     */
+    void setWindow(KWin::EffectWindow* w);
 };
 
 /**
  * Blur cache data unique to each EffectWindow and RenderView combination
  */
 struct BlurCacheData {
-    // pointer back to the "owning" effectwindow
-    KWin::EffectWindow *w;
-
-    // cache hits
-    uint hits{0};
-
     // cache entries
     BlurCacheLRU lru{};
-
-    // helper to invalidate cache, reset the hit counter
-    // and print debug stats
-    // returns true if invalidated
-    bool invalidate(QStringView reason);
 };
 
 class BlurCache {

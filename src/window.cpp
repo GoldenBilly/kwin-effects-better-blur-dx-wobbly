@@ -198,8 +198,8 @@ void BBDX::Window::triggerBlurRegionUpdate() const {
     m_windowManager->triggerBlurRegionUpdate(m_effectwindow);
 }
 
-bool BBDX::Window::invalidateBlurCache(QStringView reason) const {
-    return m_windowManager->invalidateBlurCache(m_effectwindow, reason);
+void BBDX::Window::invalidateBlurCache(QStringView reason) const {
+    m_windowManager->invalidateBlurCache(m_effectwindow, reason);
 }
 
 bool BBDX::Window::opacityChangedFromOriginal() {

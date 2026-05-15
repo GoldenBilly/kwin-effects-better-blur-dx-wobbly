@@ -116,7 +116,7 @@ public:
     /**
      * emits the windowInvalidatedBlurCache signal
      */
-    bool invalidateBlurCache(KWin::EffectWindow *w, QStringView reason) const;
+    void invalidateBlurCache(KWin::EffectWindow *w, QStringView reason) const;
 
     /**
      * Set the "window is transformed" flag on a window
