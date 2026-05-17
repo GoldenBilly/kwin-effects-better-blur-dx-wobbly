@@ -1140,7 +1140,7 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
 
     // BBDX:
     if (!renderInfo.cache.valid()) {
-        m_blurCache->selectCacheEntry(renderInfo, vbo);
+        m_blurCache->selectCacheEntry(renderInfo, vbo, dirtyRegion);
     }
     if (renderInfo.cache.valid()) {
         const float modulation = opacity * opacity;

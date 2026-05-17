@@ -233,7 +233,8 @@ BBDX::BlurCache::BlurCache() {
 }
 
 void BBDX::BlurCache::selectCacheEntry(KWin::BlurRenderData &renderInfo,
-                                       KWin::GLVertexBuffer *vbo) {
+                                       KWin::GLVertexBuffer *vbo,
+                                       const KWin::Region &dirtyRegion) {
     auto &cache = renderInfo.cache;
     std::unique_ptr<KWin::GLTexture> compareTexture{nullptr};
     std::unique_ptr<KWin::GLFramebuffer> compareFramebuffer{nullptr};
@@ -251,6 +252,12 @@ void BBDX::BlurCache::selectCacheEntry(KWin::BlurRenderData &renderInfo,
             continue;
         }
         if (prevBlitTexture->internalFormat() != blitTexture->internalFormat()) {
+            continue;
+        }
+
+        // a different dirtyRegion means different areas were blitted
+        // even if the texture itself looks the same
+        if (cacheEntry->dirtyRegion != dirtyRegion) {
             continue;
         }
 
@@ -350,7 +357,7 @@ void BBDX::BlurCache::selectCacheEntryEarly(KWin::BlurRenderData &renderInfo,
     while (auto cacheEntry = cache.next()) {
         // assume cache for the same dirtyRegion is
         // still valid for a short period (equivalent to ~30fps)
-        if (dirtyRegion == cacheEntry->dirtyRegion) {
+        if (cacheEntry->dirtyRegion == dirtyRegion) {
             std::chrono::milliseconds elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - cacheEntry->verifiedAt);
             constexpr std::chrono::milliseconds limit{1000 / 30};
             if (elapsed <= limit) {
