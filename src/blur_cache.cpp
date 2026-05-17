@@ -30,6 +30,18 @@
 
 Q_LOGGING_CATEGORY(BLUR_CACHE, "kwin_effect_better_blur_dx.blur_cache", QtInfoMsg)
 
+/**
+ * Check if a fully contains b
+ */
+static inline bool dirtyRegionContains(KWin::Region a, KWin::Region b) {
+    for (auto &rect : b.rects()) {
+        if (!a.contains(rect)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 BBDX::BlurCacheEntry::BlurCacheEntry(const KWin::Rect &scaledBackgroundRect, GLenum textureFormat, KWin::GLFramebuffer *sourceBlitFramebuffer, KWin::Region dirtyRegion) {
     // allocate new cached texture + framebuffer
     glClearColor(0, 0, 0, 0);
@@ -167,9 +179,9 @@ void BBDX::BlurCacheLRU::add(std::unique_ptr<BlurCacheEntry> entry) {
     }
 
     // Deduplicate entries with same dirtyRegion.
-    // It doesn't make sense to keep multiple of them
-    // because adding a new entry with an existing dirtyRegion
-    // means the previous entry was invalid.
+    // It doesn't make sense to keep multiple of them:
+    // 1) the new one is larger and fully contains the old one
+    // 2) the old one was invalid and is not needed anymore
     //
     // We should be able to safely assume there is at most one duplicate
     // because deduplication happens for every add()
@@ -177,7 +189,7 @@ void BBDX::BlurCacheLRU::add(std::unique_ptr<BlurCacheEntry> entry) {
     for (auto it = m_entries.begin() + 1; it != m_entries.end(); it++) {
         BlurCacheEntry* candidate = (*it).get();
 
-        if (candidate->dirtyRegion == added->dirtyRegion) {
+        if (dirtyRegionContains(added->dirtyRegion, candidate->dirtyRegion)) {
             for (auto &entry : m_entries) {
                 if (entry->priority > candidate->priority) {
                     entry->priority -= 1;
@@ -188,7 +200,7 @@ void BBDX::BlurCacheLRU::add(std::unique_ptr<BlurCacheEntry> entry) {
                                 << "Dropping old BlurCacheEntry:" << m_windowClass << "\n"
                                 << "PID:" << m_windowPID << "\n"
                                 << "Reason: Duplicate dirtyRegion\n"
-                                << "Hits:" << (*it)->hits;
+                                << "Hits:" << candidate->hits;
 
             m_entries.erase(it);
             break;
@@ -291,7 +303,7 @@ void BBDX::BlurCache::selectCacheEntry(KWin::BlurRenderData &renderInfo,
 
         // a different dirtyRegion means different areas were blitted
         // even if the texture itself looks the same
-        if (cacheEntry->dirtyRegion != dirtyRegion) {
+        if (!dirtyRegionContains(cacheEntry->dirtyRegion, dirtyRegion)) {
             continue;
         }
 
@@ -391,7 +403,7 @@ void BBDX::BlurCache::selectCacheEntryEarly(KWin::BlurRenderData &renderInfo,
     while (auto cacheEntry = cache.next()) {
         // assume cache for the same dirtyRegion is
         // still valid for a short period (equivalent to ~30fps)
-        if (cacheEntry->dirtyRegion == dirtyRegion) {
+        if (dirtyRegionContains(cacheEntry->dirtyRegion, dirtyRegion)) {
             std::chrono::milliseconds elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - cacheEntry->verifiedAt);
             constexpr std::chrono::milliseconds limit{1000 / 30};
             if (elapsed <= limit) {
