@@ -166,12 +166,46 @@ void BBDX::BlurCacheLRU::add(std::unique_ptr<BlurCacheEntry> entry) {
         m_entries[i]->priority += 1;
     }
 
-    while (m_entries.size() > m_max) {
+    // Deduplicate entries with same dirtyRegion.
+    // It doesn't make sense to keep multiple of them
+    // because adding a new entry with an existing dirtyRegion
+    // means the previous entry was invalid.
+    //
+    // We should be able to safely assume there is at most one duplicate
+    // because deduplication happens for every add()
+    BlurCacheEntry* added = m_entries[0].get();
+    for (auto it = m_entries.begin() + 1; it != m_entries.end(); it++) {
+        BlurCacheEntry* candidate = (*it).get();
+
+        if (candidate->dirtyRegion == added->dirtyRegion) {
+            for (auto &entry : m_entries) {
+                if (entry->priority > candidate->priority) {
+                    entry->priority -= 1;
+                }
+            }
+
+            qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
+                                << "Dropping old BlurCacheEntry:" << m_windowClass << "\n"
+                                << "PID:" << m_windowPID << "\n"
+                                << "Reason: Duplicate dirtyRegion\n"
+                                << "Hits:" << (*it)->hits;
+
+            m_entries.erase(it);
+            break;
+        }
+    }
+
+    // Cleanup excessive cache entries
+    //
+    // We should be able to assume the limit is exceeded by 1 at most
+    // because cleanup happens for each add()
+    if (m_entries.size() > m_max) {
         for (auto it = m_entries.begin(); it != m_entries.end(); it++) {
             if ((*it)->priority >= m_max) {
                 qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
-                                    << "Dropping old BlurCacheEntry:" << m_windowClass << "\n"
+                                    << "Dropping BlurCacheEntry:" << m_windowClass << "\n"
                                     << "PID:" << m_windowPID << "\n"
+                                    << "Reason: Exceeded limit (" << m_max << ")\n"
                                     << "Hits:" << (*it)->hits;
 
                 m_entries.erase(it);
