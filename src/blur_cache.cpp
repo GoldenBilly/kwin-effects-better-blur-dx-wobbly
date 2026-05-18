@@ -287,17 +287,17 @@ void BBDX::BlurCache::selectCacheEntry(KWin::BlurRenderData &renderInfo,
 
     cache.reset();
     while (auto cacheEntry = cache.next()) {
-        KWin::GLTexture *prevBlitTexture = cacheEntry->blitTexture.get();
+        KWin::GLTexture *cacheBlitTexture = cacheEntry->blitTexture.get();
         KWin::GLTexture *blitTexture = renderInfo.framebuffers[0].get()->colorAttachment();
 
         // previous blit texture is definitely different
-        if (!prevBlitTexture) {
+        if (!cacheBlitTexture) {
             continue;
         }
-        if (prevBlitTexture->size() != blitTexture->size()) {
+        if (cacheBlitTexture->size() != blitTexture->size()) {
             continue;
         }
-        if (prevBlitTexture->internalFormat() != blitTexture->internalFormat()) {
+        if (cacheBlitTexture->internalFormat() != blitTexture->internalFormat()) {
             continue;
         }
 
@@ -344,7 +344,7 @@ void BBDX::BlurCache::selectCacheEntry(KWin::BlurRenderData &renderInfo,
 
         m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitOldLocation, 0);
         glActiveTexture(GL_TEXTURE0);
-        prevBlitTexture->bind();
+        cacheBlitTexture->bind();
 
         m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitNewLocation, 1);
         glActiveTexture(GL_TEXTURE1);
