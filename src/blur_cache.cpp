@@ -315,7 +315,7 @@ void BBDX::BlurCache::selectCacheEntry(KWin::BlurRenderData &renderInfo,
 
         // fast path in case we already determined we
         // can't perform texture comparison
-        if (!m_glQueryAvailable) [[unlikely]] {
+        if (m_glQueryAvailable == GLQueryAvailable::NONE) [[unlikely]] {
             continue;
         }
 
@@ -359,24 +359,49 @@ void BBDX::BlurCache::selectCacheEntry(KWin::BlurRenderData &renderInfo,
         GLuint query;
         glGenQueries(1, &query);
 
-        // check for non-discarded pixels
-        // GL_ANY_SAMPLES_PASSED_CONSERVATIVE is supposedly faster but
-        // implementation dependent, may have false positives (meaning cache invalidation when not needed)
-        // and needs new-ish OpenGL 4.3 (https://registry.khronos.org/OpenGL-Refpages/gl4/html/glBeginQuery.xhtml)
-        // so let's just use the slightly slower GL_ANY_SAMPLES_PASSED (OpenGL 3.3)
-        glBeginQuery(GL_ANY_SAMPLES_PASSED, query);
+        // pick the first available query in preferred order (based on supposed speed)
+        // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glBeginQuery.xhtml
+        switch (m_glQueryAvailable) {
+            case GLQueryAvailable::ANY_SAMPLES_PASSED_CONSERVATIVE:
+                glBeginQuery(GL_ANY_SAMPLES_PASSED_CONSERVATIVE, query);
+                if (glGetError() == GL_NO_ERROR) [[likely]] {
+                    break;
+                }
 
-        // if the query isn't available just invalidate, not much we can do here
-        if (glGetError() == GL_INVALID_ENUM) [[unlikely]] {
-            qCWarning(BLUR_CACHE) << "OpenGL error: GL_ANY_SAMPLES_PASSED query not available";
-            m_glQueryAvailable = false;
-            glEndQuery(GL_ANY_SAMPLES_PASSED);
-            goto cleanup;
+                qCWarning(BLUR_CACHE) << "OpenGL error: GL_ANY_SAMPLES_PASSED_CONSERVATIVE query not available."
+                                      << "Falling back to ANY_SAMPLES_PASSED.";
+                m_glQueryAvailable = GLQueryAvailable::ANY_SAMPLES_PASSED;
+                [[fallthrough]];
+
+            case GLQueryAvailable::ANY_SAMPLES_PASSED:
+                glBeginQuery(GL_ANY_SAMPLES_PASSED, query);
+                if (glGetError() == GL_NO_ERROR) [[likely]] {
+                    break;
+                }
+
+                qCWarning(BLUR_CACHE) << "OpenGL error: GL_ANY_SAMPLES_PASSED query not available."
+                                      << "No more fallbacks.";
+                m_glQueryAvailable = GLQueryAvailable::NONE;
+                [[fallthrough]];
+
+            [[unlikely]] default:
+                goto cleanup;
         }
 
         // perform query
         vbo->draw(GL_TRIANGLES, vboStartTextureCompare(), vboCountTextureCompare());
-        glEndQuery(GL_ANY_SAMPLES_PASSED);
+        switch (m_glQueryAvailable) {
+            case GLQueryAvailable::ANY_SAMPLES_PASSED_CONSERVATIVE:
+                glEndQuery(GL_ANY_SAMPLES_PASSED_CONSERVATIVE);
+                break;
+
+            case GLQueryAvailable::ANY_SAMPLES_PASSED:
+                glEndQuery(GL_ANY_SAMPLES_PASSED);
+                break;
+
+            [[unlikely]] default:
+                goto cleanup;
+        }
 
         // await query and check
         GLuint anyPixelsDifferent;

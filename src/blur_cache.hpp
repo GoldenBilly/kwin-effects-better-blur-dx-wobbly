@@ -2,6 +2,8 @@
 
 #include "kwin_version.hpp"
 
+#include <epoxy/gl.h>
+
 #include <effect/effectwindow.h>
 #include <opengl/glframebuffer.h>
 #include <opengl/glshader.h>
@@ -156,8 +158,16 @@ private:
         int mvpMatrixLocation;
     } m_texturePass;
 
-    // set to false once the glQuery fails with GL_INVALID_ENUM
-    bool m_glQueryAvailable{true};
+    // supported query types, in preferred/tried order
+    enum class GLQueryAvailable {
+        ANY_SAMPLES_PASSED_CONSERVATIVE,
+        ANY_SAMPLES_PASSED,
+        NONE,
+    };
+
+    // set to the best supported query that
+    // didn't return an error so far
+    GLQueryAvailable m_glQueryAvailable{GLQueryAvailable::ANY_SAMPLES_PASSED_CONSERVATIVE};
 
     // During texture comparison backgroundRect is scaled by this amount
     // to speed up the OpenGL query which compares every fragment.
