@@ -32,17 +32,6 @@
 
 Q_LOGGING_CATEGORY(BLUR_CACHE, "kwin_effect_better_blur_dx.blur_cache", QtInfoMsg)
 
-/**
- * Check if a fully contains b
- */
-static inline bool dirtyRegionContains(KWin::Region a, KWin::Region b) {
-    for (auto &rect : b.rects()) {
-        if (!a.contains(rect)) {
-            return false;
-        }
-    }
-    return true;
-}
 
 BBDX::BlurCacheEntry::BlurCacheEntry(const KWin::Rect &scaledBackgroundRect, GLenum textureFormat, KWin::GLFramebuffer *sourceBlitFramebuffer, KWin::Region dirtyRegion) {
     // allocate new cached texture + framebuffer
