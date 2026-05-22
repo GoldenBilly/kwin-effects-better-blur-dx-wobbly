@@ -39,6 +39,7 @@ struct BlurCacheEntry {
     // texture of the previous "raw" pixels (blit grabbed from scene)
     // used to create this cache entry
     std::unique_ptr<KWin::GLTexture> blitTexture{nullptr};
+    std::unique_ptr<KWin::GLFramebuffer> blitFramebuffer{nullptr};
 
     // priority index, lower meaning higher priority
     uint priority{0};
@@ -56,7 +57,11 @@ struct BlurCacheEntry {
      * Create a new BlurCacheEntry by allocating cachedTexture and cachedFramebuffer
      * blitTexture is cloned from the provided blitFramebuffer.
      */
-    explicit BlurCacheEntry(const KWin::Rect &scaledBackgroundRect, GLenum textureFormat, KWin::GLFramebuffer *blitFramebuffer, KWin::Region dirtyRegion);
+    static std::unique_ptr<BlurCacheEntry> create(const KWin::Rect &scaledBackgroundRect,
+                                                  BBDX::BlurCacheEntry *oldCacheEntry,
+                                                  KWin::GLFramebuffer *dirtyBlitFramebuffer,
+                                                  KWin::Region dirtyRegion,
+                                                  KWin::Rect backgroundRect);
 };
 
 /**
@@ -120,6 +125,11 @@ public:
     BlurCacheEntry* valid() { return m_valid; }
 
     /**
+     * Get a pointer to any existing cache entry if available, else nullptr
+     */
+    BlurCacheEntry* any() { return m_entries.empty() ? nullptr : m_entries[0].get(); }
+
+    /**
      * Explicitly clear all cache entries
      * and print sats to debug log
      *
@@ -134,14 +144,6 @@ public:
      * Locked once set
      */
     void setWindow(KWin::EffectWindow* w);
-};
-
-/**
- * Blur cache data unique to each EffectWindow and RenderView combination
- */
-struct BlurCacheData {
-    // cache entries
-    BlurCacheLRU lru{};
 };
 
 class BlurCache {

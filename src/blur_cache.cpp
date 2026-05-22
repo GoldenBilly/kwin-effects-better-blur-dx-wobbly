@@ -33,50 +33,78 @@
 Q_LOGGING_CATEGORY(BLUR_CACHE, "kwin_effect_better_blur_dx.blur_cache", QtInfoMsg)
 
 
-BBDX::BlurCacheEntry::BlurCacheEntry(const KWin::Rect &scaledBackgroundRect, GLenum textureFormat, KWin::GLFramebuffer *sourceBlitFramebuffer, KWin::Region dirtyRegion) {
-    // allocate new cached texture + framebuffer
-    glClearColor(0, 0, 0, 0);
-    cachedTexture = KWin::GLTexture::allocate(textureFormat, scaledBackgroundRect.size());
-    if (!cachedTexture) {
-        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to allocate an offscreen texture";
-        return;
-    }
-    cachedTexture->setFilter(GL_LINEAR);
-    cachedTexture->setWrapMode(GL_CLAMP_TO_EDGE);
+std::unique_ptr<BBDX::BlurCacheEntry> BBDX::BlurCacheEntry::create(const KWin::Rect &scaledBackgroundRect,
+                                                                   BBDX::BlurCacheEntry *oldCacheEntry,
+                                                                   KWin::GLFramebuffer *dirtyBlitFramebuffer,
+                                                                   KWin::Region dirtyRegion,
+                                                                   KWin::Rect backgroundRect) {
+    auto entry = std::make_unique<BBDX::BlurCacheEntry>();
 
-    cachedFramebuffer = std::make_unique<KWin::GLFramebuffer>(cachedTexture.get());
-    if (!cachedFramebuffer->valid()) {
-        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to create an offscreen framebuffer";
-        return;
+    // allocate new cached texture + framebuffer for the blurred texture
+    glClearColor(0, 0, 0, 0);
+    entry->cachedTexture = KWin::GLTexture::allocate(dirtyBlitFramebuffer->colorAttachment()->internalFormat(), scaledBackgroundRect.size());
+    if (!entry->cachedTexture) {
+        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to allocate an offscreen texture";
+        return nullptr;
     }
-    KWin::GLFramebuffer::pushFramebuffer(cachedFramebuffer.get());
+    entry->cachedTexture->setFilter(GL_LINEAR);
+    entry->cachedTexture->setWrapMode(GL_CLAMP_TO_EDGE);
+
+    entry->cachedFramebuffer = std::make_unique<KWin::GLFramebuffer>(entry->cachedTexture.get());
+    if (!entry->cachedFramebuffer->valid()) {
+        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to create an offscreen framebuffer";
+        return nullptr;
+    }
+    KWin::GLFramebuffer::pushFramebuffer(entry->cachedFramebuffer.get());
     glClear(GL_COLOR_BUFFER_BIT);
     KWin::GLFramebuffer::popFramebuffer();
 
+    // clone the blitTexture from the given existing cache framebuffer, then update it with
+    // the dirty region
+    KWin::GLTexture *dirtyTexture = dirtyBlitFramebuffer->colorAttachment();
 
-    // clone the blitTexture from the given framebuffer
-    KWin::GLTexture *sourceTexture = sourceBlitFramebuffer->colorAttachment();
-
-    blitTexture = KWin::GLTexture::allocate(sourceTexture->internalFormat(), sourceTexture->size());
-    if (!blitTexture) {
+    entry->blitTexture = KWin::GLTexture::allocate(dirtyTexture->internalFormat(), dirtyTexture->size());
+    if (!entry->blitTexture) {
         qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to allocate an offscreen texture";
-        return;
+        return nullptr;
     }
-    blitTexture->setFilter(GL_LINEAR);
-    blitTexture->setWrapMode(GL_CLAMP_TO_EDGE);
+    entry->blitTexture->setFilter(GL_LINEAR);
+    entry->blitTexture->setWrapMode(GL_CLAMP_TO_EDGE);
 
-    auto blitFramebuffer = std::make_unique<KWin::GLFramebuffer>(blitTexture.get());
-    if (!blitFramebuffer->valid()) {
+    entry->blitFramebuffer = std::make_unique<KWin::GLFramebuffer>(entry->blitTexture.get());
+    if (!entry->blitFramebuffer->valid()) {
         qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to create an offscreen framebuffer";
-        return;
+        return nullptr;
     }
 
-    KWin::GLFramebuffer::pushFramebuffer(sourceBlitFramebuffer);
-    blitFramebuffer->blitFromFramebuffer();
+    // check if we're only partially painting
+    // if that's the case oldCacheEntry is required
+    // to not get a partial texture
+    KWin::Region missingPaint{backgroundRect};
+    for (const auto &rect : dirtyRegion.rects()) {
+        missingPaint -= rect;
+    }
+    bool partialPaint{!missingPaint.isEmpty()};
+
+    if (partialPaint && oldCacheEntry) {
+        KWin::GLFramebuffer::pushFramebuffer(oldCacheEntry->blitFramebuffer.get());
+        entry->blitFramebuffer->blitFromFramebuffer();
+        KWin::GLFramebuffer::popFramebuffer();
+    } else if (partialPaint) {
+        qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Partial paint without old BlurCacheEntry";
+        return nullptr;
+    }
+
+    KWin::GLFramebuffer::pushFramebuffer(dirtyBlitFramebuffer);
+    for (const auto &rect : dirtyRegion.rects()) {
+        entry->blitFramebuffer->blitFromFramebuffer(rect, rect.translated(-backgroundRect.topLeft()));
+    }
     KWin::GLFramebuffer::popFramebuffer();
 
-    this->dirtyRegion = dirtyRegion;
-    verifiedAt = std::chrono::steady_clock::now();
+    entry->dirtyRegion = dirtyRegion;
+    entry->verifiedAt = std::chrono::steady_clock::now();
+
+    return entry;
 }
 
 void BBDX::BlurCacheLRU::reset() {

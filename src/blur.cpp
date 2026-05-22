@@ -1157,7 +1157,20 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
         vbo->unbindArrays();
         return;
     } else {
-        auto cacheEntry = std::make_unique<BBDX::BlurCacheEntry>(scaledBackgroundRect, textureFormat, renderInfo.framebuffers[0].get(), dirtyRegion);
+        auto cacheEntry = BBDX::BlurCacheEntry::create(scaledBackgroundRect,
+                                                       renderInfo.cache.any(),
+                                                       renderInfo.framebuffers[0].get(),
+                                                       dirtyRegion,
+                                                       backgroundRect);
+        // Couldn't create a new cache entry, likely
+        // due to not having a previous cache entry and
+        // only partially painting.
+        // Trigger a full repaint so this gets fixed.
+        if (!cacheEntry) {
+            qCDebug(KWIN_BLUR) << "Triggering full repaint for" << w->windowClass();
+            w->addRepaintFull();
+            return;
+        }
         renderInfo.cache.add(std::move(cacheEntry));
     }
 
