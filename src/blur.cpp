@@ -689,9 +689,6 @@ void BlurEffect::prePaintScreen(ScreenPrePaintData &data)
     m_currentView = data.view;
 #endif
 
-    // BBDX:
-    m_windowManager->expandPaintedRegions(data);
-
 #if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
     effects->prePaintScreen(data, presentTime);
 #else
