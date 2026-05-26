@@ -487,8 +487,15 @@ void BBDX::BlurCache::checkCacheValidity(KWin::ScreenPrePaintData &data) {
             continue;
         }
 
+        QString windowClass{"unknown unknown"};
+        if (query.window()) [[likely]] {
+            windowClass = query.window()->windowClass();
+        }
+
         switch (query.result()) {
             case ValidationQuery::Result::CHANGED:
+                qCDebug(BLUR_CACHE) << "Pixels behind" << windowClass << "changed";
+
                 // add repaint
                 for (const auto &rect : query.dirtyRegion().rects()) {
                     data.paint |= rect;
