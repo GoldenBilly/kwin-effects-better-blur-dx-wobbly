@@ -42,8 +42,10 @@ struct BlurCacheEntry {
 
     // texture of the previous "raw" pixels (blit grabbed from scene)
     // used to create this cache entry
-    std::unique_ptr<KWin::GLTexture> blitTexture{nullptr};
-    std::unique_ptr<KWin::GLFramebuffer> blitFramebuffer{nullptr};
+    // Uses shared pointers because the validation query also gets
+    // a handle to these
+    std::shared_ptr<KWin::GLTexture> blitTexture{nullptr};
+    std::shared_ptr<KWin::GLFramebuffer> blitFramebuffer{nullptr};
 
     // priority index, lower meaning higher priority
     uint priority{0};
@@ -177,7 +179,7 @@ class ValidationQuery {
     const KWin::EffectWindow *m_window{};
     KWin::Region m_dirtyRegion{};
 
-    std::pair<std::unique_ptr<KWin::GLTexture>, std::unique_ptr<KWin::GLFramebuffer>> m_oldTextureFBO{};
+    std::pair<std::shared_ptr<KWin::GLTexture>, std::shared_ptr<KWin::GLFramebuffer>> m_oldTextureFBO{};
     std::pair<std::unique_ptr<KWin::GLTexture>, std::unique_ptr<KWin::GLFramebuffer>> m_newTextureFBO{};
 
 public:
@@ -196,14 +198,14 @@ public:
                              const KWin::RenderView *view,
                              const KWin::EffectWindow *window,
                              KWin::Region dirtyRegion,
-                             std::pair<std::unique_ptr<KWin::GLTexture>, std::unique_ptr<KWin::GLFramebuffer>> oldTextureFBO,
+                             std::pair<std::shared_ptr<KWin::GLTexture>, std::shared_ptr<KWin::GLFramebuffer>> oldTextureFBO,
                              std::pair<std::unique_ptr<KWin::GLTexture>, std::unique_ptr<KWin::GLFramebuffer>> newTextureFBO)
         : m_queryObject{queryObject}
         , m_queryUsed{queryUsed}
         , m_view{view}
         , m_window{window}
         , m_dirtyRegion{dirtyRegion}
-        , m_oldTextureFBO{std::move(oldTextureFBO)}
+        , m_oldTextureFBO{oldTextureFBO}
         , m_newTextureFBO{std::move(newTextureFBO)}
         {}
 

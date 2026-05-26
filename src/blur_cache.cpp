@@ -358,8 +358,8 @@ void BBDX::BlurCache::selectCacheEntry(BBDX::BlurRenderData &renderInfo,
             return;
         }
 
-        // TODO: skip in dirty cache case
-        auto oldTextureFBO = cloneFBO(cacheEntry->blitFramebuffer.get());
+        // TODO: replace clone for newTextureFBO
+        auto oldTextureFBO = std::pair{cacheEntry->blitTexture, cacheEntry->blitFramebuffer};
         auto newTextureFBO = cloneFBO(renderInfo.framebuffers[0].get());
         auto &[oldTexture, oldFramebuffer] = oldTextureFBO;
         auto &[newTexture, newFramebuffer] = newTextureFBO;
@@ -493,7 +493,7 @@ void BBDX::BlurCache::selectCacheEntry(BBDX::BlurRenderData &renderInfo,
                                          m_paintData.view,
                                          m_paintData.window,
                                          *m_paintData.dirtyRegion,
-                                         std::move(oldTextureFBO),
+                                         oldTextureFBO,
                                          std::move(newTextureFBO));
         queryQueued = true;
 
