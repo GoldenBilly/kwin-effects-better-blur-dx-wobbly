@@ -255,12 +255,14 @@ BBDX::ValidationQuery::~ValidationQuery() {
 
 BBDX::ValidationQuery::Result BBDX::ValidationQuery::result() const {
 
+    /*
     GLuint available{GL_FALSE};
     glGetQueryObjectuiv(m_queryObject, GL_QUERY_RESULT_AVAILABLE, &available);
 
     if (!available) {
         return Result::WAITING;
     }
+    */
 
     switch (m_queryUsed) {
         case GL_SAMPLES_PASSED: {
