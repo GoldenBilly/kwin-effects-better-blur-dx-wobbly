@@ -427,6 +427,7 @@ void BBDX::BlurCache::selectCacheEntry(BBDX::BlurRenderData &renderInfo,
         }
 
         // queue up successful query
+        qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Adding validation query";
         m_validationQueries.emplace_back(queryObject,
                                          queryUsed,
                                          m_paintData.view,
@@ -452,6 +453,7 @@ cleanup:
         glActiveTexture(GL_TEXTURE0);
 
         if (!queryQueued) {
+            qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Could not add validation query";
             glDeleteQueries(1, &queryObject);
         }
 
@@ -479,6 +481,8 @@ void BBDX::BlurCache::selectCacheEntryEarly(BBDX::BlurRenderData &renderInfo) {
 }
 
 void BBDX::BlurCache::checkCacheValidity(KWin::ScreenPrePaintData &data) {
+    qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Checking cache validity. Active Queries:" << m_validationQueries.size();
+
     for (size_t i = 0; i < m_validationQueries.size(); ) {
         const auto &query = m_validationQueries[i];
 
