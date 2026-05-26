@@ -5,6 +5,7 @@
 #include "utils.h"
 
 #include <epoxy/gl.h>
+#include <epoxy/gl_generated.h>
 #include <qloggingcategory.h>
 #include <scene/scene.h>
 #include <sys/types.h>
@@ -409,22 +410,7 @@ void BBDX::BlurCache::selectCacheEntry(BBDX::BlurRenderData &renderInfo,
             glDisable(GL_SCISSOR_TEST);
         }
 
-        switch (m_glQueryAvailable) {
-            case GLQueryAvailable::ANY_SAMPLES_PASSED_CONSERVATIVE:
-                glEndQuery(GL_ANY_SAMPLES_PASSED_CONSERVATIVE);
-                break;
-
-            case GLQueryAvailable::ANY_SAMPLES_PASSED:
-                glEndQuery(GL_ANY_SAMPLES_PASSED);
-                break;
-
-            case GLQueryAvailable::SAMPLES_PASSED:
-                glEndQuery(GL_SAMPLES_PASSED);
-                break;
-
-            [[unlikely]] default:
-                goto cleanup;
-        }
+        glEndQuery(queryUsed);
 
         // queue up successful query
         qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Adding validation query";
