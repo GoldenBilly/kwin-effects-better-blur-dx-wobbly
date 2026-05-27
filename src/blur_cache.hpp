@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kwin_version.hpp"
+#include "kwin_compat.hpp"
 
 #include <effect/effect.h>
 #include <epoxy/gl.h>
@@ -12,9 +12,7 @@
 #include <opengl/glvertexbuffer.h>
 #include <scene/scene.h>
 
-#if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
-#  include "kwin_compat_6_5.hpp"
-#else
+#if KWIN_VERSION >= KWIN_VERSION_CODE(6, 5, 80)
 #  include <core/rect.h>
 #endif
 

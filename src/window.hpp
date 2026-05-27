@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kwin_version.hpp"
+#include "kwin_compat.hpp"
 
 #include <QObject>
 #include <QRegion>
@@ -8,13 +8,8 @@
 #include <chrono>
 #include <optional>
 
-#if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
-#  include "kwin_compat_6_5.hpp"
-#else
+#if KWIN_VERSION >= KWIN_VERSION_CODE(6, 5, 80)
 #  include <core/region.h>
-#endif
-#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
-#  include "kwin_compat_6_6.hpp"
 #endif
 
 namespace KWin {

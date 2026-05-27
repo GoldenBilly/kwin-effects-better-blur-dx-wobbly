@@ -11,20 +11,15 @@
 #include "blurconfig.h"
 
 #include "blur_cache.hpp"
-#include "kwin_version.hpp"
+#include "kwin_compat.hpp"
 #include "refraction_pass.hpp"
 #include "rounded_corners_pass.hpp"
 #include "utils.h"
 #include "window_manager.hpp"
 
-#if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
-#  include "kwin_compat_6_5.hpp"
-#else
+#if KWIN_VERSION >= KWIN_VERSION_CODE(6, 5, 80)
 #  include <core/rect.h>
 #  include <core/region.h>
-#endif
-#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
-#  include "kwin_compat_6_6.hpp"
 #endif
 
 #include <core/output.h>

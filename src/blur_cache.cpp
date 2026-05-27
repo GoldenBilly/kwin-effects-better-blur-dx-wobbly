@@ -1,7 +1,8 @@
 #include "blur_cache.hpp"
 
+#include "kwin_compat.hpp"
+
 #include "blur.h"
-#include "kwin_version.hpp"
 #include "utils.h"
 
 #include <epoxy/gl.h>
@@ -19,9 +20,7 @@
 #include <opengl/glshadermanager.h>
 #include <opengl/gltexture.h>
 
-#if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
-#  include "kwin_compat_6_5.hpp"
-#else
+#if KWIN_VERSION >= KWIN_VERSION_CODE(6, 5, 80)
 #  include <core/rect.h>
 #endif
 
@@ -498,11 +497,17 @@ void BBDX::BlurCache::selectCacheEntryEarly(BBDX::BlurRenderData &renderInfo) {
 void BBDX::BlurCache::checkCacheValidity(KWin::ScreenPrePaintData &data) {
     //qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Checking cache validity. Active Queries:" << m_validationQueries.size();
 
+#if defined(BETTERBLUR_X11)
+    const auto &view = data.screen;
+#else
+    const auto &view = data.view;
+#endif
+
     for (size_t i = 0; i < m_validationQueries.size(); ) {
         const auto &query = m_validationQueries[i];
 
         // repaints are per view and we only want to handle the current RenderView
-        if (query.view() != data.view) {
+        if (query.view() != view) {
             i++;
             continue;
         }
@@ -512,7 +517,7 @@ void BBDX::BlurCache::checkCacheValidity(KWin::ScreenPrePaintData &data) {
                 // cache invalid, mark dirty and add repaint
                 if (auto it = m_effect->m_windows.find(const_cast<KWin::EffectWindow *>(query.window())); it != m_effect->m_windows.end()) {
                     auto &effectData = it->second;
-                    if (auto it = effectData.render.find(data.view); it != effectData.render.end()) {
+                    if (auto it = effectData.render.find(view); it != effectData.render.end()) {
                         auto &renderInfo = it->second;
                         
                         renderInfo.cache.setDirty();

@@ -1,12 +1,10 @@
 #include "rounded_corners_pass.hpp"
 
 #include "blur.h"
-#include "kwin_version.hpp"
+#include "kwin_compat.hpp"
 #include "utils.h"
 
-#if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
-#  include "kwin_compat_6_5.hpp"
-#else
+#if KWIN_VERSION >= KWIN_VERSION_CODE(6, 5, 80)
 #  include <core/rect.h>
 #  include <core/region.h>
 #endif

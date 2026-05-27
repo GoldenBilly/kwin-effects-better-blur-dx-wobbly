@@ -1,20 +1,15 @@
 #pragma once
 
-#include "kwin_version.hpp"
+#include "kwin_compat.hpp"
 #include "window.hpp"
 
 #include <effect/effect.h>
 #include <effect/effecthandler.h>
 #include <effect/effectwindow.h>
 
-#if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
-#  include "kwin_compat_6_5.hpp"
-#else
+#if KWIN_VERSION >= KWIN_VERSION_CODE(6, 5, 80)
 #  include <core/output.h>
 #  include <core/region.h>
-#endif
-#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
-#  include "kwin_compat_6_6.hpp"
 #endif
 
 #include <QList>
