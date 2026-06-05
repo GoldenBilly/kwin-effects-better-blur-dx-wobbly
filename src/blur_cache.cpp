@@ -369,18 +369,17 @@ void BBDX::BlurCache::selectCacheEntry(BBDX::BlurRenderData &renderInfo,
         // QUERY START
 
         // textures + FBOs used in query
-        auto oldTextureFBO = std::pair{cacheEntry->blitTexture, cacheEntry->blitFramebuffer};
+        auto cachedTextureFBO = std::pair{cacheEntry->blitTexture, cacheEntry->blitFramebuffer};
         auto newTextureFBO = std::pair{renderInfo.textures[0], renderInfo.framebuffers[0]};
-        auto &[oldTexture, oldFramebuffer] = oldTextureFBO;
+        auto &[cachedTexture, cachedFramebuffer] = cachedTextureFBO;
         auto &[newTexture, newFramebuffer] = newTextureFBO;
-
-        // Use FBO of the cached blit; the query's draw will also
-        // update this with pixels from the new blit (if it differs)
-        const auto compareFramebuffer = oldFramebuffer.get();
 
         // check if textures differ on the pixel level
         KWin::ShaderManager::instance()->pushShader(m_textureComparePass.shader.get());
-        KWin::GLFramebuffer::pushFramebuffer(compareFramebuffer);
+
+        // Use FBO of the cached blit; the query's draw will also
+        // update this with pixels from the new blit (if it differs)
+        KWin::GLFramebuffer::pushFramebuffer(cachedFramebuffer.get());
 
         QMatrix4x4 projectionMatrix;
         projectionMatrix.ortho(QRectF(0.0, 0.0, newTexture->width(), newTexture->height()));
@@ -389,7 +388,7 @@ void BBDX::BlurCache::selectCacheEntry(BBDX::BlurRenderData &renderInfo,
 
         m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitOldLocation, 0);
         glActiveTexture(GL_TEXTURE0);
-        oldTexture->bind();
+        cachedTexture->bind();
 
         m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitNewLocation, 1);
         glActiveTexture(GL_TEXTURE1);
@@ -443,41 +442,7 @@ void BBDX::BlurCache::selectCacheEntry(BBDX::BlurRenderData &renderInfo,
                 goto cleanup;
         }
 
-        {
-            // we need scissoring to properly catch partial repaints,
-            // else OpenGL can just draw everything even if the VBO says differently
-            glEnable(GL_SCISSOR_TEST);
-
-            const auto &rects = m_paintData.textureCompareRegion.rects();
-            const uint vertsPerRect = vboCountTextureCompare() / rects.size();
-            uint vboStart = vboStartTextureCompare();
-
-            // draw each scissor region (Y-flipped; KWin topLeft maps to OpenGL bottomLeft)
-            for (const auto &rect : rects) {
-                // for the scissor round outwards
-                const GLint left = rect.left();
-                const GLint right = rect.right();
-                const GLint top = compareFramebuffer->size().height() - rect.top();
-                const GLint bottom = compareFramebuffer->size().height() - rect.bottom();
-
-                const GLint width = right - left;
-                const GLint height = top - bottom;
-
-                // OpenGL requires these to be positive
-                // and it wouldn't make sense to draw empty Rects anyway
-                if (width <= 0 || height <= 0) {
-                    vboStart += vertsPerRect;
-                    continue;
-                }
-
-                glScissor(left, bottom, width, height);
-
-                vbo->draw(GL_TRIANGLES, vboStart, vertsPerRect);
-                vboStart += vertsPerRect;
-            }
-
-            glDisable(GL_SCISSOR_TEST);
-        }
+        vbo->draw(GL_TRIANGLES, vboStartTextureCompare(), vboCountTextureCompare());
 
         glEndQuery(queryUsed);
 
@@ -487,7 +452,7 @@ void BBDX::BlurCache::selectCacheEntry(BBDX::BlurRenderData &renderInfo,
                                          m_paintData.view,
                                          m_paintData.window,
                                          *m_paintData.dirtyRegion,
-                                         oldTextureFBO,
+                                         cachedTextureFBO,
                                          newTextureFBO);
         queryQueued = true;
 
