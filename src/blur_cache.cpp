@@ -41,14 +41,14 @@ Q_LOGGING_CATEGORY(BLUR_CACHE, "kwin_effect_better_blur_dx.blur_cache", QtInfoMs
 static inline std::chrono::steady_clock::time_point validationsToTTL(uint validations) {
     // we start at 60fps
     // each validation cuts framerate in half
-    // (minimum 10fps)
+    // (minimum 5fps)
     uint fps;
 
-    // 60u >> 3 = 7
-    if (validations < 3) {
+    // 60u >> 4 = 3
+    if (validations < 4) {
         fps = 60u >> validations;
     } else {
-        fps = 10u;
+        fps = 5u;
     }
 
     constexpr std::chrono::microseconds second{1000000};
