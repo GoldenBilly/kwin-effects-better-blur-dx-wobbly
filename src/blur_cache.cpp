@@ -661,102 +661,105 @@ void BBDX::BlurCache::prepareCache(BBDX::BlurRenderData &renderInfo,
         return;
     }
 
-    if (auto cacheEntry = cache.get()) {
-        // Somehow we can end up here with an empty textureCompareRegion
-        // which would mean there was no dirtyRegion and thus no blitted data.
-        // Just accept and bail.
-        if (m_paintData.textureCompareRegion.isEmpty()) {
-            cache.select();
-            return;
-        }
+    auto cacheEntry = cache.get();
+    if (!cacheEntry) {
+        return;
+    }
 
-        // QUERY START
+    // Somehow we can end up here with an empty textureCompareRegion
+    // which would mean there was no dirtyRegion and thus no blitted data.
+    // Just accept and bail.
+    if (m_paintData.textureCompareRegion.isEmpty()) {
+        cache.select();
+        return;
+    }
 
-        // textures + FBOs used in query
-        auto cachedTextureFBO = std::pair{cacheEntry->blitTexture, cacheEntry->blitFramebuffer};
-        auto newTextureFBO = std::pair{renderInfo.textures[0], renderInfo.framebuffers[0]};
-        auto &[cachedTexture, cachedFramebuffer] = cachedTextureFBO;
-        auto &[newTexture, newFramebuffer] = newTextureFBO;
+    // QUERY START
 
-        // check if textures differ on the pixel level
-        KWin::ShaderManager::instance()->pushShader(m_textureComparePass.shader.get());
+    // textures + FBOs used in query
+    auto cachedTextureFBO = std::pair{cacheEntry->blitTexture, cacheEntry->blitFramebuffer};
+    auto newTextureFBO = std::pair{renderInfo.textures[0], renderInfo.framebuffers[0]};
+    auto &[cachedTexture, cachedFramebuffer] = cachedTextureFBO;
+    auto &[newTexture, newFramebuffer] = newTextureFBO;
 
-        // Use FBO of the cached blit; the query's draw will also
-        // update this with pixels from the new blit (if it differs)
-        KWin::GLFramebuffer::pushFramebuffer(cachedFramebuffer.get());
+    // check if textures differ on the pixel level
+    KWin::ShaderManager::instance()->pushShader(m_textureComparePass.shader.get());
 
-        QMatrix4x4 projectionMatrix;
-        projectionMatrix.ortho(QRectF(0.0, 0.0, newTexture->width(), newTexture->height()));
+    // Use FBO of the cached blit; the query's draw will also
+    // update this with pixels from the new blit (if it differs)
+    KWin::GLFramebuffer::pushFramebuffer(cachedFramebuffer.get());
 
-        m_textureComparePass.shader->setUniform(m_textureComparePass.mvpMatrixLocation, projectionMatrix);
+    QMatrix4x4 projectionMatrix;
+    projectionMatrix.ortho(QRectF(0.0, 0.0, newTexture->width(), newTexture->height()));
 
-        m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitOldLocation, 0);
-        glActiveTexture(GL_TEXTURE0);
-        cachedTexture->bind();
+    m_textureComparePass.shader->setUniform(m_textureComparePass.mvpMatrixLocation, projectionMatrix);
 
-        m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitNewLocation, 1);
-        glActiveTexture(GL_TEXTURE1);
-        newTexture->bind();
+    m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitOldLocation, 0);
+    glActiveTexture(GL_TEXTURE0);
+    cachedTexture->bind();
 
-        glGenQueries(1, m_glQueryObject.get());
+    m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitNewLocation, 1);
+    glActiveTexture(GL_TEXTURE1);
+    newTexture->bind();
 
-        // pick the first available query in preferred order (based on supposed speed)
-        // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glBeginQuery.xhtml
-        GLenum queryUsed{};
-        switch (m_glQueryAvailable) {
-            case GLQueryAvailable::ANY_SAMPLES_PASSED_CONSERVATIVE:
-                glBeginQuery(GL_ANY_SAMPLES_PASSED_CONSERVATIVE, *m_glQueryObject);
-                if (glGetError() == GL_NO_ERROR) [[likely]] {
-                    queryUsed = GL_ANY_SAMPLES_PASSED_CONSERVATIVE;
-                    break;
-                }
+    glGenQueries(1, m_glQueryObject.get());
 
-                qCWarning(BLUR_CACHE) << "OpenGL error: GL_ANY_SAMPLES_PASSED_CONSERVATIVE query not available."
-                                      << "Falling back to ANY_SAMPLES_PASSED.";
-                m_glQueryAvailable = GLQueryAvailable::ANY_SAMPLES_PASSED;
-                [[fallthrough]];
+    // pick the first available query in preferred order (based on supposed speed)
+    // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glBeginQuery.xhtml
+    GLenum queryUsed{};
+    switch (m_glQueryAvailable) {
+        case GLQueryAvailable::ANY_SAMPLES_PASSED_CONSERVATIVE:
+            glBeginQuery(GL_ANY_SAMPLES_PASSED_CONSERVATIVE, *m_glQueryObject);
+            if (glGetError() == GL_NO_ERROR) [[likely]] {
+                queryUsed = GL_ANY_SAMPLES_PASSED_CONSERVATIVE;
+                break;
+            }
 
-            case GLQueryAvailable::ANY_SAMPLES_PASSED:
-                glBeginQuery(GL_ANY_SAMPLES_PASSED, *m_glQueryObject);
-                if (glGetError() == GL_NO_ERROR) [[likely]] {
-                    queryUsed = GL_ANY_SAMPLES_PASSED;
-                    break;
-                }
+            qCWarning(BLUR_CACHE) << "OpenGL error: GL_ANY_SAMPLES_PASSED_CONSERVATIVE query not available."
+                                  << "Falling back to ANY_SAMPLES_PASSED.";
+            m_glQueryAvailable = GLQueryAvailable::ANY_SAMPLES_PASSED;
+            [[fallthrough]];
 
-                qCWarning(BLUR_CACHE) << "OpenGL error: GL_ANY_SAMPLES_PASSED query not available."
-                                      << "Falling back to SAMPLES_PASSED.";
-                m_glQueryAvailable = GLQueryAvailable::SAMPLES_PASSED;
-                [[fallthrough]];
+        case GLQueryAvailable::ANY_SAMPLES_PASSED:
+            glBeginQuery(GL_ANY_SAMPLES_PASSED, *m_glQueryObject);
+            if (glGetError() == GL_NO_ERROR) [[likely]] {
+                queryUsed = GL_ANY_SAMPLES_PASSED;
+                break;
+            }
 
-            case GLQueryAvailable::SAMPLES_PASSED:
-                glBeginQuery(GL_SAMPLES_PASSED, *m_glQueryObject);
-                if (glGetError() == GL_NO_ERROR) [[likely]] {
-                    queryUsed = GL_SAMPLES_PASSED;
-                    break;
-                }
+            qCWarning(BLUR_CACHE) << "OpenGL error: GL_ANY_SAMPLES_PASSED query not available."
+                                  << "Falling back to SAMPLES_PASSED.";
+            m_glQueryAvailable = GLQueryAvailable::SAMPLES_PASSED;
+            [[fallthrough]];
 
-                qCWarning(BLUR_CACHE) << "OpenGL error: GL_SAMPLES_PASSED query not available."
-                                      << "No more fallbacks.";
-                m_glQueryAvailable = GLQueryAvailable::NONE;
-                [[fallthrough]];
+        case GLQueryAvailable::SAMPLES_PASSED:
+            glBeginQuery(GL_SAMPLES_PASSED, *m_glQueryObject);
+            if (glGetError() == GL_NO_ERROR) [[likely]] {
+                queryUsed = GL_SAMPLES_PASSED;
+                break;
+            }
 
-            [[unlikely]] default:
-                goto cleanup;
-        }
+            qCWarning(BLUR_CACHE) << "OpenGL error: GL_SAMPLES_PASSED query not available."
+                                  << "No more fallbacks.";
+            m_glQueryAvailable = GLQueryAvailable::NONE;
+            [[fallthrough]];
 
-        vbo->draw(GL_TRIANGLES, vboStartTextureCompare(), vboCountTextureCompare());
+        [[unlikely]] default:
+            goto cleanup;
+    }
 
-        glEndQuery(queryUsed);
+    vbo->draw(GL_TRIANGLES, vboStartTextureCompare(), vboCountTextureCompare());
+
+    glEndQuery(queryUsed);
 
 
 cleanup:
-        glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE0);
 
-        KWin::GLFramebuffer::popFramebuffer();
-        KWin::ShaderManager::instance()->popShader();
+    KWin::GLFramebuffer::popFramebuffer();
+    KWin::ShaderManager::instance()->popShader();
 
-        // QUERY END
-    }
+    // QUERY END
 }
 
 void BBDX::BlurCache::drawCached(const KWin::Rect &scaledBackgroundRect, const KWin::RenderViewport &viewport, BBDX::BlurRenderData &renderInfo, KWin::GLVertexBuffer *vbo, const int vertexCount, const float modulation) const {
