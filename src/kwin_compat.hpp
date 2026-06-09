@@ -6,16 +6,16 @@
  */
 
 
-#include "kwin_version.hpp"
+#include "kwin_version.hpp" // IWYU pragma: export
 
 #if defined(BETTERBLUR_X11)
-#   include "kwin_compat_x11.hpp"
+#   include "kwin_compat_x11.hpp" // IWYU pragma: export
 #endif
 
 #if KWIN_VERSION < KWIN_VERSION_CODE(6, 5, 80)
-#   include "kwin_compat_6_5.hpp"
+#   include "kwin_compat_6_5.hpp" // IWYU pragma: export
 #endif
 
 #if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 80)
-#   include "kwin_compat_6_6.hpp"
+#   include "kwin_compat_6_6.hpp" // IWYU pragma: export
 #endif
