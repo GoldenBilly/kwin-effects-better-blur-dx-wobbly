@@ -201,11 +201,6 @@ private:
         const KWin::Rect *scaledBackgroundRect;
         KWin::GLFramebuffer *blitFramebuffer;
 
-        // dirtyRegion adjusted for use in setupVBO()
-        // and the vertexCount it will use
-        KWin::Region textureCompareRegion{};
-        uint textureCompareVertexCount;
-
         // on first paint before we have a usuable cache entry
         // we won't call glBeginConditionalRender
         bool glBeginConditionalRenderCalled{false};
@@ -240,14 +235,12 @@ public:
      * Adds BlurCache::addedVertices() vertices
      */
     void setupVBO(std::span<KWin::GLVertex2D> &map, size_t &vboIndex) const;
-    uint addedVertices() const { return m_paintData.textureCompareVertexCount + 6; }
+    uint addedVertices() const { return 6; }
 
     /**
      * Start indices and vert count of stuff in the VBO
      */
-    uint vboStartTextureCompare() const { return 6; }
-    uint vboCountTextureCompare() const { return m_paintData.textureCompareVertexCount; }
-    uint vboStartCache() const { return vboStartTextureCompare() + vboCountTextureCompare(); }
+    uint vboStartCache() const { return 6; }
     uint vboCountCache() const { return 6; }
     uint vboStartScreen() const { return vboStartCache() + vboCountCache(); }
 
@@ -255,11 +248,11 @@ public:
      * Set up query and call glBeginConditionalRender
      *
      * Should be called after VBO was bound
-     * 
+     *
      * The regular blur passes should happen between this and
      * BlurCached::rawCached()
      */
-    void prepareCache(BlurCacheLRU &cache, KWin::GLVertexBuffer *vbo);
+    void prepareCache(BlurCacheLRU &cache);
 
     /**
      * Call glEndConditionalRender and draw the cached texture
