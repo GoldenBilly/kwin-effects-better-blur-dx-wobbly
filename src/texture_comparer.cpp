@@ -227,10 +227,12 @@ void BBDX::TextureComparer::compareAndUpdate(KWin::GLTexture *freshBlit, KWin::G
     // in debug builds log the changed pixels
     GLuint pixelsChanged{0};
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(GLuint), &pixelsChanged);
-    if (window) {
-        qCDebug(BBDX_TEXTURE_COMPARER) << "Pixels changed (" << window->windowClass() << "):" << pixelsChanged;
-    } else {
-        qCDebug(BBDX_TEXTURE_COMPARER) << "Pixels changed:" << pixelsChanged;
+    if (pixelsChanged > 0) {
+        if (window) {
+            qCDebug(BBDX_TEXTURE_COMPARER) << "Pixels changed (" << window->windowClass() << "):" << pixelsChanged;
+        } else {
+            qCDebug(BBDX_TEXTURE_COMPARER) << "Pixels changed:" << pixelsChanged;
+        }
     }
 #endif
 
