@@ -604,6 +604,16 @@ bool BlurEffect::enabledByDefault()
 
 bool BlurEffect::supported()
 {
+    const auto context = effects->openglContext();
+    if (!context) return false;
+
+    // we require GL 4.3 or GLES 3.1
+    if (context->isOpenGLES()) {
+        if (context->glslVersion() < Version(3, 1)) return false;
+    } else {
+        if (context->glslVersion() < Version(4, 3)) return false;
+    }
+
 #if defined(BETTERBLUR_X11)
     return effects->openglContext() && effects->openglContext()->supportsBlits();
 #else
