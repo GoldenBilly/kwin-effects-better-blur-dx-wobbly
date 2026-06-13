@@ -36,7 +36,7 @@ void main() {
     ivec2 uv = u_dirtyRect.xy + threadCoord;
 
     // ignore threads exceeding dirtyRect (due to fixed 16x16 work groups)
-    if (threadCoord.x < u_dirtyRect.z && threadCoord.y < u_dirtyRect.w) {
+    if (uv.x < u_dirtyRect.z && uv.y < u_dirtyRect.w) {
         // A and B are expected to be the same
         ivec2 textureSize = imageSize(freshBlit);
         
