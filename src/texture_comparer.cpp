@@ -225,15 +225,11 @@ void BBDX::TextureComparer::compareAndUpdate(KWin::GLTexture *freshBlit, KWin::G
 #if defined(BBDX_DEBUG)
     // in debug builds log the changed pixels
     GLuint pixelsChanged{0};
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_counterBuffer);
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(GLuint), &pixelsChanged);
     qCDebug(BBDX_TEXTURE_COMPARER) << "Pixels changed:" << pixelsChanged;
 #endif
 
-    // cleanup
-    // unbind/clear in reverse order
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    // done with the textures, counterBuffer is still needed by query
     glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
     glBindImageTexture(1, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
 
@@ -256,4 +252,9 @@ void BBDX::TextureComparer::compareAndUpdate(KWin::GLTexture *freshBlit, KWin::G
     glDepthMask(GL_TRUE);
 
     KWin::ShaderManager::instance()->popShader();
+
+    // cleanup
+    // unbind counterBuffer in reverse order
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
