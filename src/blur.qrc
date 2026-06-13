@@ -24,5 +24,8 @@
   <file>shaders/upsample_core.frag</file>
   <file>shaders/vertex.vert</file>
   <file>shaders/vertex_core.vert</file>
+  <file>shaders/texture_compare_and_update.comp</file>
+  <file>shaders/texture_compare_and_update.vert</file>
+  <file>shaders/texture_compare_and_update.frag</file>
 </qresource>
 </RCC>
