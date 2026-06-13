@@ -30,7 +30,6 @@
 #include <QtNumeric>
 
 #include <memory>
-#include <array>
 
 Q_LOGGING_CATEGORY(BLUR_CACHE, "kwin_effect_better_blur_dx.blur_cache", QtInfoMsg)
 
@@ -153,22 +152,6 @@ void BBDX::BlurCacheLRU::setWindow(KWin::EffectWindow* w) {
     m_window = w;
     m_windowClass = m_window->windowClass();
     m_windowPID = m_window->pid();
-}
-
-GLuint BBDX::BlurCacheLRU::getGlQueryObject() {
-    // lazily allocate the objects
-    if (!m_glQueryObjects) {
-        auto rawGlQueryObjects = new std::array<GLuint, QUERY_OBJECT_COUNT>{};
-        m_glQueryObjects = std::unique_ptr<std::array<GLuint, QUERY_OBJECT_COUNT>, GLQueryObjectsDeleter>{rawGlQueryObjects};
-        glGenQueries(m_glQueryObjects->size(), m_glQueryObjects->data());
-    }
-
-    GLuint queryObject = m_glQueryObjects->at(m_nextGlQueryObject++);
-    if (m_nextGlQueryObject >= m_glQueryObjects->size()) {
-        m_nextGlQueryObject = 0;
-    }
-
-    return queryObject;
 }
 
 BBDX::BlurCache::BlurCache(BBDX::BlurEffect *effect) {
