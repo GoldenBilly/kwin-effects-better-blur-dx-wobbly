@@ -4,6 +4,7 @@
 
 #include "blur.h"
 #include "utils.h"
+#include "texture_comparer.hpp"
 
 #include <epoxy/gl.h>
 #include <epoxy/gl_generated.h>
@@ -185,6 +186,12 @@ BBDX::BlurCache::BlurCache(BBDX::BlurEffect *effect) {
     } else {
         m_texturePass.mvpMatrixLocation = m_texturePass.shader->uniformLocation("modelViewProjectionMatrix");
     }
+
+    m_textureComparer = TextureComparer::create();
+    if (!m_textureComparer) {
+        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to create TextureComparer";
+        return;
+    }
 }
 
 void BBDX::BlurCache::preparePaintData(const KWin::RenderView *view,
@@ -334,144 +341,14 @@ void BBDX::BlurCache::prepareCache(BBDX::BlurCacheLRU &cache,
         return;
     }
 
-    // fast path in case we already determined we
-    // can't perform texture comparison
-    if (m_glQueryAvailable == GLQueryAvailable::NONE) [[unlikely]] {
-        return;
-    }
-
-    // Somehow we can end up here with an empty textureCompareRegion
-    // which would mean there was no dirtyRegion and thus no blitted data.
-    //
-    // TODO: currently this just causes re-blur 
-    if (m_paintData.textureCompareRegion.isEmpty()) {
-        return;
-    }
-
-    // QUERY START
-
-    // textures + FBOs used in query
-    const auto cachedTexture = cacheEntry->blitTexture.get();
-    const auto cachedFramebuffer = cacheEntry->blitFramebuffer.get();
     const auto newTexture = m_paintData.blitFramebuffer->colorAttachment();
+    const auto cachedTexture = cacheEntry->blitTexture.get();
 
-    // check if textures differ on the pixel level
-    KWin::ShaderManager::instance()->pushShader(m_textureComparePass.shader.get());
+    m_textureComparer->compareAndUpdate(newTexture, cachedTexture, cacheEntry->localDirtyRegion(*m_paintData.dirtyRegion));
 
-    // Use FBO of the cached blit; the query's draw will also
-    // update this with pixels from the new blit (if it differs)
-    KWin::GLFramebuffer::pushFramebuffer(cachedFramebuffer);
-
-    QMatrix4x4 projectionMatrix;
-    projectionMatrix.ortho(QRectF(0.0, 0.0, newTexture->width(), newTexture->height()));
-
-    m_textureComparePass.shader->setUniform(m_textureComparePass.mvpMatrixLocation, projectionMatrix);
-
-    m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitOldLocation, 0);
-    glActiveTexture(GL_TEXTURE0);
-    cachedTexture->bind();
-
-    m_textureComparePass.shader->setUniform(m_textureComparePass.texUnitNewLocation, 1);
-    glActiveTexture(GL_TEXTURE1);
-    newTexture->bind();
-
-    // grab query object from available query objects
-    GLuint queryObject = cache.getGlQueryObject();
-
-    // pick the first available query in preferred order (based on supposed speed)
-    // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glBeginQuery.xhtml
-    GLenum queryUsed{};
-    switch (m_glQueryAvailable) {
-        case GLQueryAvailable::ANY_SAMPLES_PASSED_CONSERVATIVE:
-            glBeginQuery(GL_ANY_SAMPLES_PASSED_CONSERVATIVE, queryObject);
-            if (glGetError() == GL_NO_ERROR) [[likely]] {
-                queryUsed = GL_ANY_SAMPLES_PASSED_CONSERVATIVE;
-                break;
-            }
-
-            qCWarning(BLUR_CACHE) << "OpenGL error: GL_ANY_SAMPLES_PASSED_CONSERVATIVE query not available."
-                                  << "Falling back to ANY_SAMPLES_PASSED.";
-            m_glQueryAvailable = GLQueryAvailable::ANY_SAMPLES_PASSED;
-            [[fallthrough]];
-
-        case GLQueryAvailable::ANY_SAMPLES_PASSED:
-            glBeginQuery(GL_ANY_SAMPLES_PASSED, queryObject);
-            if (glGetError() == GL_NO_ERROR) [[likely]] {
-                queryUsed = GL_ANY_SAMPLES_PASSED;
-                break;
-            }
-
-            qCWarning(BLUR_CACHE) << "OpenGL error: GL_ANY_SAMPLES_PASSED query not available."
-                                  << "Falling back to SAMPLES_PASSED.";
-            m_glQueryAvailable = GLQueryAvailable::SAMPLES_PASSED;
-            [[fallthrough]];
-
-        case GLQueryAvailable::SAMPLES_PASSED:
-            glBeginQuery(GL_SAMPLES_PASSED, queryObject);
-            if (glGetError() == GL_NO_ERROR) [[likely]] {
-                queryUsed = GL_SAMPLES_PASSED;
-                break;
-            }
-
-            qCWarning(BLUR_CACHE) << "OpenGL error: GL_SAMPLES_PASSED query not available."
-                                  << "No more fallbacks.";
-            m_glQueryAvailable = GLQueryAvailable::NONE;
-            [[fallthrough]];
-
-        [[unlikely]] default:
-            goto cleanup;
-    }
-
-    vbo->draw(GL_TRIANGLES, vboStartTextureCompare(), vboCountTextureCompare());
-
-    glEndQuery(queryUsed);
-
-#if defined(BBDX_DEBUG)
-    // GL_QUERY_RESULT is blocking and forces a CPU/GPU sync,
-    // so only enable this in the debug build
-
-    qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Comparing region ("
-                        << m_paintData.window->windowClass() << "):"
-                        << m_paintData.textureCompareRegion;
-
-    switch (queryUsed) {
-        case GL_SAMPLES_PASSED: {
-            GLuint pixelsDifferent{0};
-            glGetQueryObjectuiv(queryObject, GL_QUERY_RESULT, &pixelsDifferent);
-            if (pixelsDifferent > 0) {
-                qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Pixels different ("
-                                    << m_paintData.window->windowClass() << "):"
-                                    << pixelsDifferent;
-            }
-            break;
-        }
-
-        [[likely]] default: {
-            GLuint anyPixelsDifferent{GL_FALSE};
-            glGetQueryObjectuiv(queryObject, GL_QUERY_RESULT, &anyPixelsDifferent);
-            if (anyPixelsDifferent == GL_TRUE) {
-                qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "Pixels different ("
-                                    << m_paintData.window->windowClass() << ")";
-            }
-            break;
-        }
-    }
-#endif
-
-    glBeginConditionalRender(queryObject, GL_QUERY_BY_REGION_WAIT);
+    // await the query from TextureComparer::compareAndUpdate()
+    glBeginConditionalRender(m_textureComparer->queryObject(), GL_QUERY_BY_REGION_WAIT);
     m_paintData.glBeginConditionalRenderCalled = true;
-
-    // our query implicitly updates the blur source, this
-    // makes sure subsequent blur passes get the correct one
-    glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_FRAMEBUFFER_BARRIER_BIT);
-
-cleanup:
-    glActiveTexture(GL_TEXTURE0);
-
-    KWin::GLFramebuffer::popFramebuffer();
-    KWin::ShaderManager::instance()->popShader();
-
-    // QUERY END
 }
 
 void BBDX::BlurCache::drawCached(const KWin::RenderViewport &viewport, BBDX::BlurRenderData &renderInfo, KWin::GLVertexBuffer *vbo, const int vertexCount, const float modulation) const {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "kwin_compat.hpp"
+#include "texture_comparer.hpp"
 
 #include <effect/effect.h>
 #include <epoxy/gl.h>
@@ -26,6 +27,7 @@ namespace KWin {
 
 namespace BBDX {
 class BlurEffect;
+class TextureComparer;
 struct BlurRenderData;
 
 // OpenGL query objects per BlurCacheLRU
@@ -169,6 +171,9 @@ private:
 
     // pointer to the managing effect
     BlurEffect *m_effect{nullptr};
+
+    // owned TextureComparer
+    std::unique_ptr<TextureComparer> m_textureComparer{};
 
     /**
      * set to the best supported query that
