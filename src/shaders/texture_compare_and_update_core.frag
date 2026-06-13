@@ -2,6 +2,8 @@
 
 // glQuery glue for texture_compare_and_update.comp
 
+out vec4 FragColor;
+
 // bind to the exact same SSBO slot as the compute shader
 layout(std430, binding = 2) buffer AtomicCounterBuffer {
     uint globalChangeCount;
@@ -14,5 +16,5 @@ void main() {
     }
     
     // dummy pass
-    gl_FragColor = vec4(1.0); 
+    FragColor = vec4(1.0); 
 }
