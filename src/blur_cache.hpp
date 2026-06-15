@@ -77,6 +77,7 @@ struct BlurCacheEntry {
 class BlurCacheLRU {
 private:
     std::unique_ptr<BlurCacheEntry> m_entry{};
+    std::unique_ptr<TextureComparer::WindowData> m_textureCompareWindowData{};
     KWin::EffectWindow* m_window{nullptr};
     QString m_windowClass{"unknown unknown"};
     pid_t m_windowPID{-1};
@@ -95,6 +96,12 @@ public:
      * if none exists
      */
     BlurCacheEntry* get();
+
+    /**
+     * Return const pointer to the contained texture compare
+     * region and lazily create it if needed
+     */
+    const TextureComparer::WindowData* textureCompareWindowData();
 
     /**
      * Add an entry to the cache, potentially removing the already existing entry.

@@ -15,6 +15,37 @@
 namespace BBDX {
 
 class TextureComparer {
+public:
+    /**
+     * Per Window (BlurCacheLRU) data
+     */
+    struct WindowData {
+    private:
+        /**
+         * Use create()
+         */
+        WindowData() = default;
+
+    public:
+        // SSBO counting changed blocks
+        GLuint counterBuffer{0};
+
+        // GL query object used for conditional render
+        GLuint query{0};
+
+        /**
+         * Create WindowData
+         * nullptr on error
+         */
+        static std::unique_ptr<WindowData> create();
+
+        /**
+         * Cleanup GL resources
+         */
+        ~WindowData();
+    };
+
+private:
     // a compute shader instance
     // because we need one for each texture format
     struct ComputeShader {
@@ -35,12 +66,6 @@ class TextureComparer {
     // regular vert+frag so let KWin handle it
     std::unique_ptr<KWin::GLShader> m_glueShader{nullptr};
 
-    // shared buffer for the counter
-    GLuint m_counterBuffer{0};
-
-    // the glue query object
-    GLuint m_glueQuery{0};
-
     TextureComparer() = default;
 
     /**
@@ -57,22 +82,10 @@ public:
     static std::unique_ptr<TextureComparer> create();
 
     /**
-     * Clean up GL resources
-     */
-    ~TextureComparer();
-
-    /**
      * No copying
      */
     TextureComparer(TextureComparer &other) = delete;
     TextureComparer& operator=(TextureComparer &other) = delete;
-
-    /**
-     * Get non-owning copy of the query object ID
-     *
-     * Should only be used to see the result after compareAndUpdate()
-     */
-    GLuint queryObject() const {  return m_glueQuery; }
 
     /**
      * Compare and update cachedBlit with freshBlit
@@ -84,7 +97,7 @@ public:
      * The result of the comparison can be found using the
      * query object returned by queryObject()
      */
-    void compareAndUpdate(KWin::GLTexture *freshBlit, KWin::GLTexture *cachedBlit, const KWin::Region &localDirtyRegionGL, const KWin::EffectWindow *window = nullptr);
+    void compareAndUpdate(const WindowData *windowData, KWin::GLTexture *freshBlit, KWin::GLTexture *cachedBlit, const KWin::Region &localDirtyRegionGL, const KWin::EffectWindow *window = nullptr);
 };
 
 }

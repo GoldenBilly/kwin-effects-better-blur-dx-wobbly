@@ -110,6 +110,20 @@ BBDX::BlurCacheEntry* BBDX::BlurCacheLRU::get() {
     return m_entry.get();
 }
 
+const BBDX::TextureComparer::WindowData* BBDX::BlurCacheLRU::textureCompareWindowData() {
+    // alloc only happens once per Window+RenderView combination
+    if (!m_textureCompareWindowData) [[unlikely]] {
+        m_textureCompareWindowData = TextureComparer::WindowData::create();
+
+        if (!m_textureCompareWindowData) {
+            qCCritical(BLUR_CACHE) << "Failed to create TextureComparer::WindowData";
+            return nullptr;
+        }
+    }
+
+    return m_textureCompareWindowData.get();
+}
+
 void BBDX::BlurCacheLRU::add(std::unique_ptr<BlurCacheEntry> entry) {
     if (m_entry) {
         qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
@@ -267,16 +281,23 @@ void BBDX::BlurCache::prepareCache(BBDX::BlurCacheLRU &cache) {
         return;
     }
 
+    const auto textureCompareWindowData = cache.textureCompareWindowData();
+    if (!textureCompareWindowData) [[unlikely]] {
+        // GL resource alloc failed
+        return;
+    }
+
     const auto newTexture = m_paintData.blitFramebuffer->colorAttachment();
     const auto cachedTexture = cacheEntry->blitTexture.get();
 
-    m_textureComparer->compareAndUpdate(newTexture,
+    m_textureComparer->compareAndUpdate(textureCompareWindowData,
+                                        newTexture,
                                         cachedTexture,
                                         cacheEntry->localDirtyRegionGL(*m_paintData.dirtyRegion),
                                         m_paintData.window);
 
     // await the query from TextureComparer::compareAndUpdate()
-    glBeginConditionalRender(m_textureComparer->queryObject(), GL_QUERY_BY_REGION_WAIT);
+    glBeginConditionalRender(textureCompareWindowData->query, GL_QUERY_BY_REGION_WAIT);
     m_paintData.glBeginConditionalRenderCalled = true;
 }
 
