@@ -118,9 +118,11 @@ void BBDX::BlurCacheEntry::flush() {
 }
 
 void BBDX::BlurCacheEntry::flushed() {
-    accumulatedDirtyRegion = KWin::Region{};
-    lastFlush = std::chrono::steady_clock::now();
-    isFlushing = false;
+    if (isFlushing) {
+        accumulatedDirtyRegion = KWin::Region{};
+        lastFlush = std::chrono::steady_clock::now();
+        isFlushing = false;
+    }
 }
 
 BBDX::BlurCacheEntry* BBDX::BlurCacheLRU::get() {
