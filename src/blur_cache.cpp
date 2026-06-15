@@ -29,6 +29,7 @@
 #include <QVector2D>
 #include <QtNumeric>
 
+#include <chrono>
 #include <memory>
 
 Q_LOGGING_CATEGORY(BLUR_CACHE, "kwin_effect_better_blur_dx.blur_cache", QtInfoMsg)
@@ -91,6 +92,12 @@ std::unique_ptr<BBDX::BlurCacheEntry> BBDX::BlurCacheEntry::create(const KWin::R
                                             << "dirtyRegion:" << dirtyRegion;
 
     return entry;
+}
+
+void BBDX::BlurCacheEntry::accumulateDirtyRegion(const KWin::Region &dirtyRegion) {
+    for (const auto &rect : dirtyRegion.rects()) {
+        accumulatedDirtyRegion |= rect;
+    }
 }
 
 KWin::Region BBDX::BlurCacheEntry::localDirtyRegion(const KWin::Region &dirtyRegion) const {
@@ -208,6 +215,7 @@ void BBDX::BlurCache::preparePaintData(const KWin::RenderView *view,
     // correct info
     if (auto cacheEntry = cache.get()) {
         cacheEntry->backgroundRect = *backgroundRect;
+        cacheEntry->accumulateDirtyRegion(*dirtyRegion);
     }
 }
 
@@ -281,6 +289,11 @@ void BBDX::BlurCache::prepareCache(BBDX::BlurCacheLRU &cache) {
         return;
     }
 
+    // only proceed if marked in flushAccumulatedDirtyRegions()
+    if (!cacheEntry->isFlushing) {
+        return;
+    }
+
     const auto textureCompareWindowData = cache.textureCompareWindowData();
     if (!textureCompareWindowData) [[unlikely]] {
         // GL resource alloc failed
@@ -347,4 +360,38 @@ void BBDX::BlurCache::drawToCache(BBDX::BlurCacheLRU &cache, KWin::GLVertexBuffe
     KWin::GLFramebuffer::pushFramebuffer(cachedFramebuffer);
     vbo->draw(GL_TRIANGLES, vboStartCache(), vboCountCache());
     KWin::GLFramebuffer::popFramebuffer();
+}
+
+
+void BBDX::BlurCache::flushAccumulatedDirtyRegions(KWin::ScreenPrePaintData &data) const {
+    for (auto &[window, effectData] : m_effect->m_windows) {
+        for (auto &[view, renderData] : effectData.render) {
+            if (view == data.view) {
+                continue;
+            }
+
+            auto cacheEntry = renderData.cache.get();
+            if (!cacheEntry) {
+                continue;
+            }
+
+            // flush at ~30fps
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - cacheEntry->lastFlush);
+            if (elapsed.count() < 33) {
+                continue;
+            }
+
+            for (const auto &rect : cacheEntry->accumulatedDirtyRegion.rects()) {
+                data.paint |= rect;
+            }
+
+            // we'll always set isFlushing here
+            // it should essentially be a no-op if there was no
+            // accumulatedDirtyRegion but ensures prepareCache()
+            // still checks new dirtyRegion ASAP when the timer elapsed
+            cacheEntry->accumulatedDirtyRegion = KWin::Region{};
+            cacheEntry->lastFlush = std::chrono::steady_clock::now();
+            cacheEntry->isFlushing = true;
+        }
+    }
 }

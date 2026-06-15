@@ -3,6 +3,7 @@
 #include "kwin_compat.hpp"
 #include "texture_comparer.hpp"
 
+#include <chrono>
 #include <effect/effect.h>
 #include <epoxy/gl.h>
 
@@ -44,8 +45,26 @@ struct BlurCacheEntry {
     std::unique_ptr<KWin::GLTexture> blitTexture{nullptr};
     std::unique_ptr<KWin::GLFramebuffer> blitFramebuffer{nullptr};
 
-    // backgroundRect used to create this cache entry
+    /**
+     * backgroundRect behind this cache entry
+     * updated by BlurCache::preparePaintData()
+     */
     KWin::Rect backgroundRect{};
+
+    /**
+     * dirtyRegion accumulated since lastFlush
+     * in global coordinated
+     * TODO: throw away on geometry change?
+     * updated by BlurCache::preparePaintData()
+     */
+    KWin::Region accumulatedDirtyRegion{};
+    std::chrono::steady_clock::time_point lastFlush{};
+
+    /**
+     * true if accumulatedDirtyRegion was consumed in prePaintScreen
+     * and we need to to check and potentially re-blur
+     */
+    bool isFlushing{false};
 
     /**
      * Create a new BlurCacheEntry by allocating cachedTexture and cachedFramebuffer
@@ -218,6 +237,11 @@ public:
      * vbo->draw() wrapper to draw into BlurCacheData of the provided cache
      */
     void drawToCache(BBDX::BlurCacheLRU &cache, KWin::GLVertexBuffer *vbo) const;
+
+    /**
+     * Flush all window's accumulatedDirtyRegions
+     */
+    void flushAccumulatedDirtyRegions(KWin::ScreenPrePaintData &data) const;
 };
 
 } // namespace BBDX

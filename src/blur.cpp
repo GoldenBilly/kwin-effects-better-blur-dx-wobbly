@@ -685,6 +685,8 @@ void BlurEffect::prePaintScreen(ScreenPrePaintData &data)
     m_currentView = data.view;
 #endif
 
+    m_blurCache->flushAccumulatedDirtyRegions(data);
+
 #if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
     effects->prePaintScreen(data, presentTime);
 #else
@@ -1146,6 +1148,13 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
     m_blurCache->prepareCache(renderInfo.cache);
     if (!renderInfo.cache.get()) {
         qCWarning(KWIN_BLUR) << BBDX::LOG_PREFIX << "Bailing due to missing cache entry";
+        return;
+    }
+
+    // BBDX: rate limited
+    if (!renderInfo.cache.get()->isFlushing) {
+        const float modulation = opacity * opacity;
+        m_blurCache->drawCached(viewport, renderInfo, vbo, vertexCount, modulation);
         return;
     }
 
