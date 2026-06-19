@@ -84,11 +84,8 @@ struct BlurCacheEntry {
 
     /**
      * Helpers for mapping dirtyRegion into backgroundRect
-     *
-     * the *GL version additionally flips along the y axis into OpenGL coordinates
      */
     KWin::Region localDirtyRegion(const KWin::Region &dirtyRegion) const;
-    KWin::Region localDirtyRegionGL(const KWin::Region &dirtyRegion) const;
 
     /**
      * Mark this entry for flushing and reset accumulatedDirtyRegion
@@ -158,6 +155,19 @@ public:
     KWin::EffectWindow* window() const { return m_window; }
 };
 
+struct BlurCachePaintData {
+    const KWin::RenderView *view;
+    const KWin::EffectWindow *window;
+    const KWin::Region *dirtyRegion;
+    const KWin::Rect *backgroundRect;
+    const KWin::Rect *scaledBackgroundRect;
+    KWin::GLFramebuffer *blitFramebuffer;
+
+    // on first paint before we have a usuable cache entry
+    // we won't call glBeginConditionalRender
+    bool glBeginConditionalRenderCalled{false};
+};
+
 class BlurCache {
 private:
     struct {
@@ -173,18 +183,7 @@ private:
 
     // Data used for this specific window paint
     // !!! preparePaintData() must be called before accessing any of this !!!
-    struct {
-        const KWin::RenderView *view;
-        const KWin::EffectWindow *window;
-        const KWin::Region *dirtyRegion;
-        const KWin::Rect *backgroundRect;
-        const KWin::Rect *scaledBackgroundRect;
-        KWin::GLFramebuffer *blitFramebuffer;
-
-        // on first paint before we have a usuable cache entry
-        // we won't call glBeginConditionalRender
-        bool glBeginConditionalRenderCalled{false};
-    } m_paintData;
+    BlurCachePaintData m_paintData{};
 
 public:
     /**

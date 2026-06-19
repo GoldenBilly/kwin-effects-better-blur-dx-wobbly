@@ -15,6 +15,8 @@
 
 namespace BBDX {
 
+struct BlurCachePaintData;
+
 class TextureComparer {
 public:
     /**
@@ -66,6 +68,14 @@ public:
         std::optional<std::pair<GLuint, GLuint>> getSlot();
     };
 
+    // the Rect struct as used in the compute shader
+    struct ComputeShaderRect {
+        GLint left;
+        GLint right;
+        GLint top;
+        GLint bottom;
+    };
+
 private:
     // a compute shader instance
     // because we need one for each texture format
@@ -84,14 +94,6 @@ private:
                 glDeleteBuffers(1, &dirtyRegionBuffer);
             }
         }
-    };
-
-    // the Rect struct as used in the compute shader
-    struct ComputeShaderRect {
-        GLint left;
-        GLint right;
-        GLint top;
-        GLint bottom;
     };
 
     // compute shaders - we need to handle this ourselves :p
@@ -134,7 +136,7 @@ public:
      * The result of the comparison can be found using the
      * query object returned by queryObject()
      */
-    void compareAndUpdate(const std::pair<GLuint, GLuint> &windowDataSlot, KWin::GLTexture *freshBlit, KWin::GLTexture *cachedBlit, const KWin::Region &localDirtyRegionGL, const KWin::EffectWindow *window = nullptr);
+    void compareAndUpdate(const std::pair<GLuint, GLuint> &windowDataSlot, KWin::GLTexture *freshBlit, KWin::GLTexture *cachedBlit, const BlurCachePaintData &paintData);
 };
 
 }

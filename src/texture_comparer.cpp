@@ -2,6 +2,8 @@
 
 #include "kwin_compat.hpp"
 
+#include "blur_cache.hpp"
+
 #include <effect/effectwindow.h>
 #include <opengl/glshadermanager.h>
 #include <opengl/glshader.h>
@@ -47,6 +49,36 @@ static inline std::pair<GLenum, const char*> glslFormat(GLenum internalFormat) {
     }
 }
 
+/**
+ * Map dirtyRegion into backgroundRect (texture local coords)
+ * and flip along the Y axis.
+ *
+ * returns pair of dirtyRegion as std::vector<ComputeShaderRect> and its boundingRect
+ */
+static inline std::pair<std::vector<BBDX::TextureComparer::ComputeShaderRect>, KWin::Rect> localDirtyRegionGL(const KWin::Region &dirtyRegion, const KWin::Rect &backgroundRect) {
+    std::vector<BBDX::TextureComparer::ComputeShaderRect> glDirtyRegion{};
+    glDirtyRegion.reserve(dirtyRegion.rects().size());
+
+    const auto localDirtyRegion = dirtyRegion.translated(-backgroundRect.topLeft());
+
+    for (const auto &rect : localDirtyRegion.rects()) {
+        const int glLeft = rect.left();
+        const int glRight = rect.left() + rect.width();
+        const int glTop = backgroundRect.height() - (rect.top() + rect.height());
+        const int glBottom = backgroundRect.height() - rect.top();
+
+        glDirtyRegion.emplace_back(glLeft, glRight, glTop, glBottom);
+    }
+
+    KWin::Rect boundingRect;
+    {
+        const auto &rect = localDirtyRegion.boundingRect();
+        const int glTop = backgroundRect.height() - (rect.top() + rect.height());
+        boundingRect = KWin::Rect{rect.left(), glTop, rect.width(), rect.height()};
+    }
+
+    return {std::move(glDirtyRegion), std::move(boundingRect)};
+}
 
 std::unique_ptr<BBDX::TextureComparer::WindowData> BBDX::TextureComparer::WindowData::create() {
     std::unique_ptr<WindowData> windowData{new WindowData{}};
@@ -213,11 +245,7 @@ std::unique_ptr<BBDX::TextureComparer> BBDX::TextureComparer::create() {
     return textureComparer;
 }
 
-void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &windowDataSlot, KWin::GLTexture *freshBlit, KWin::GLTexture *cachedBlit, const KWin::Region &localDirtyRegionGL, const KWin::EffectWindow *window) {
-#if !defined(BBDX_DEBUG)
-    Q_UNUSED(window);
-#endif
-
+void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &windowDataSlot, KWin::GLTexture *freshBlit, KWin::GLTexture *cachedBlit, const BBDX::BlurCachePaintData &paintData) {
     const GLuint counterBuffer{windowDataSlot.first};
     const GLuint query{windowDataSlot.second};
 
@@ -255,12 +283,7 @@ void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &wi
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, counterBuffer);
 
     // prepare dirtyRegion
-    std::vector<ComputeShaderRect> glDirtyRegion{};
-    glDirtyRegion.reserve(localDirtyRegionGL.rects().size());
-
-    for (const auto &rect : localDirtyRegionGL.rects()) {
-        glDirtyRegion.emplace_back(rect.left(), rect.right(), rect.top(), rect.bottom());
-    }
+    const auto [glDirtyRegion, boundingRect] = localDirtyRegionGL(*paintData.dirtyRegion, *paintData.backgroundRect);
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, computeShader->dirtyRegionBuffer);
     glBufferData(GL_SHADER_STORAGE_BUFFER, glDirtyRegion.size() * sizeof(ComputeShaderRect), glDirtyRegion.data(), GL_STREAM_DRAW);
@@ -271,12 +294,11 @@ void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &wi
     glGetIntegerv(GL_CURRENT_PROGRAM, &prevProgram);
     glUseProgram(computeShader->program);
 
-    const auto boundingBox = localDirtyRegionGL.boundingRect();
     glUniform1i(computeShader->dirtyRegionRectCountLocation, glDirtyRegion.size());
-    glUniform4i(computeShader->dirtyRegionBoundingBoxLocation, boundingBox.left(), boundingBox.right(), boundingBox.top(), boundingBox.bottom());
+    glUniform4i(computeShader->dirtyRegionBoundingBoxLocation, boundingRect.left(), boundingRect.right(), boundingRect.top(), boundingRect.bottom());
 
     // dispatch in 16x16 workgroup blocks (ceiled, matching compute shader params)
-    glDispatchCompute((boundingBox.width() + 15) / 16, (boundingBox.height() + 15) / 16, 1);
+    glDispatchCompute((boundingRect.width() + 15) / 16, (boundingRect.height() + 15) / 16, 1);
 
 #if defined(BBDX_DEBUG)
     // in debug builds log the changed pixels

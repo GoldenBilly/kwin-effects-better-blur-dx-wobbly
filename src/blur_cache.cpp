@@ -105,15 +105,6 @@ KWin::Region BBDX::BlurCacheEntry::localDirtyRegion(const KWin::Region &dirtyReg
     return dirtyRegion.translated(-backgroundRect.topLeft());
 }
 
-KWin::Region BBDX::BlurCacheEntry::localDirtyRegionGL(const KWin::Region &dirtyRegion) const {
-    KWin::Region glRegion{};
-    for (const auto &rect : localDirtyRegion(dirtyRegion).rects()) {
-        int glY = backgroundRect.height() - rect.y() - rect.height();
-        glRegion |= KWin::Rect{rect.x(), glY, rect.width(), rect.height()};
-    }
-    return glRegion;
-}
-
 void BBDX::BlurCacheEntry::flush() {
     isFlushing = true;
 }
@@ -336,8 +327,7 @@ void BBDX::BlurCache::prepareCache(BBDX::BlurCacheLRU &cache) {
     m_textureComparer->compareAndUpdate(*textureCompareWindowDataSlot,
                                         newTexture,
                                         cachedTexture,
-                                        cacheEntry->localDirtyRegionGL(*m_paintData.dirtyRegion),
-                                        m_paintData.window);
+                                        m_paintData);
 
     // await the query from TextureComparer::compareAndUpdate()
     glBeginConditionalRender(textureCompareWindowDataSlot->second, GL_QUERY_BY_REGION_WAIT);
