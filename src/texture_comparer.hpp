@@ -71,13 +71,27 @@ private:
     // because we need one for each texture format
     struct ComputeShader {
         GLuint program{0};
-        GLint dirtyRectLocation{};
+        GLuint dirtyRegionBuffer{};
+        GLint dirtyRegionRectCountLocation{};
+        GLint dirtyRegionBoundingBoxLocation{};
 
         ~ComputeShader() {
             if (program > 0) {
                 glDeleteProgram(program);
             }
+
+            if (dirtyRegionBuffer > 0) {
+                glDeleteBuffers(1, &dirtyRegionBuffer);
+            }
         }
+    };
+
+    // the Rect struct as used in the compute shader
+    struct ComputeShaderRect {
+        GLint left;
+        GLint right;
+        GLint top;
+        GLint bottom;
     };
 
     // compute shaders - we need to handle this ourselves :p

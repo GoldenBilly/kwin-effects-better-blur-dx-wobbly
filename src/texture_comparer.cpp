@@ -179,8 +179,12 @@ std::unique_ptr<BBDX::TextureComparer::ComputeShader> BBDX::TextureComparer::bui
         qCDebug(BBDX_TEXTURE_COMPARER) << "Compute shader linking log:\n" << log;
     }
 
+    // dirtyRegion buffer
+    glGenBuffers(1, &computeShader->dirtyRegionBuffer);
+
     // store locations of uniform params
-    computeShader->dirtyRectLocation = glGetUniformLocation(computeShader->program, "u_dirtyRect");
+    computeShader->dirtyRegionRectCountLocation = glGetUniformLocation(computeShader->program, "u_dirtyRegionRectCount");
+    computeShader->dirtyRegionBoundingBoxLocation = glGetUniformLocation(computeShader->program, "u_dirtyRegionBoundingBox");
 
     return computeShader;
 }
@@ -250,23 +254,29 @@ void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &wi
     // slot 2 - matching compute shader
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, counterBuffer);
 
+    // prepare dirtyRegion
+    std::vector<ComputeShaderRect> glDirtyRegion{};
+    glDirtyRegion.reserve(localDirtyRegionGL.rects().size());
+
+    for (const auto &rect : localDirtyRegionGL.rects()) {
+        glDirtyRegion.emplace_back(rect.left(), rect.right(), rect.top(), rect.bottom());
+    }
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, computeShader->dirtyRegionBuffer);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, glDirtyRegion.size() * sizeof(ComputeShaderRect), glDirtyRegion.data(), GL_STREAM_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, computeShader->dirtyRegionBuffer);
+
+    const auto boundingBox = localDirtyRegionGL.boundingRect();
+    glUniform1i(computeShader->dirtyRegionRectCountLocation, glDirtyRegion.size());
+    glUniform4i(computeShader->dirtyRegionBoundingBoxLocation, boundingBox.left(), boundingBox.right(), boundingBox.top(), boundingBox.bottom());
+
     // prepare compute shader
     GLint prevProgram{};
     glGetIntegerv(GL_CURRENT_PROGRAM, &prevProgram);
     glUseProgram(computeShader->program);
 
-    for (const auto &rect : localDirtyRegionGL.rects()) {
-        // sanity check the Rect is not empty
-        if (rect.width() <= 0 || rect.height() <= 0) {
-            continue;
-        }
-
-        // bind dirtyRect, in OpenGL coords
-        glUniform4i(computeShader->dirtyRectLocation, rect.x(), rect.y(), rect.width(), rect.height());
-
-        // dispatch in 16x16 workgroup blocks (ceiled, matching compute shader params)
-        glDispatchCompute((rect.width() + 15) / 16, (rect.height() + 15) / 16, 1);
-    }
+    // dispatch in 16x16 workgroup blocks (ceiled, matching compute shader params)
+    glDispatchCompute((boundingBox.width() + 15) / 16, (boundingBox.height() + 15) / 16, 1);
 
 #if defined(BBDX_DEBUG)
     // in debug builds log the changed pixels
@@ -285,9 +295,10 @@ void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &wi
     // ensure SSBO is flushed for query
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-    // done with the textures, counterBuffer is still needed by query
+    // done with the textures and dirtyRegion, counterBuffer is still needed by query
     glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
     glBindImageTexture(1, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, 0);
 
     // revert to whatever program was used before
     // (let's hope this doesn't mess up KWin state)
