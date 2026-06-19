@@ -266,9 +266,6 @@ std::expected<void, BBDX::TextureComparer::Error> BBDX::TextureComparer::compare
     // lazily create compute shader instances in case we need
     // them for non GL_RGBA8
     if (!m_computeShaders.contains(normalizedFormat)) {
-        // TODO:
-        // it's probably bad if this fails... I'll probably deal with
-        // it later.. maybe...
         auto newComputeShader = buildComputeShader(normalizedFormat);
         if (!newComputeShader) {
             qCWarning(BBDX_TEXTURE_COMPARER) << "Failed to build texture compare compute shader";
