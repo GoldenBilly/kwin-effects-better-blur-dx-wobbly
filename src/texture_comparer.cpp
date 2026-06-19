@@ -5,6 +5,7 @@
 #include "blur_cache.hpp"
 
 #include <effect/effectwindow.h>
+#include <epoxy/gl_generated.h>
 #include <opengl/glshadermanager.h>
 #include <opengl/glshader.h>
 #include <opengl/gltexture.h>
@@ -16,8 +17,10 @@
 #include <epoxy/gl.h>
 
 #include <memory>
+#include <qloggingcategory.h>
 #include <unordered_map>
 #include <array>
+#include <expected>
 
 Q_LOGGING_CATEGORY(BBDX_TEXTURE_COMPARER, "kwin_effect_better_blur_dx.texture_comparer", QtInfoMsg)
 
@@ -79,6 +82,14 @@ static inline std::pair<std::vector<BBDX::TextureComparer::ComputeShaderRect>, K
     }
 
     return {std::move(glDirtyRegion), std::move(boundingRect)};
+}
+
+/**
+ * Continously call glGetError() until no more errors
+ * are returned
+ */
+static inline void flushGlErrors() {
+    while (glGetError() != GL_NO_ERROR) {}
 }
 
 std::unique_ptr<BBDX::TextureComparer::WindowData> BBDX::TextureComparer::WindowData::create() {
@@ -246,7 +257,7 @@ std::unique_ptr<BBDX::TextureComparer> BBDX::TextureComparer::create() {
     return textureComparer;
 }
 
-void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &windowDataSlot, KWin::GLTexture *freshBlit, KWin::GLTexture *cachedBlit, const BBDX::BlurCachePaintData &paintData) {
+std::expected<void, BBDX::TextureComparer::Error> BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &windowDataSlot, KWin::GLTexture *freshBlit, KWin::GLTexture *cachedBlit, const BBDX::BlurCachePaintData &paintData) {
     const GLuint counterBuffer{windowDataSlot.first};
     const GLuint query{windowDataSlot.second};
 
@@ -260,8 +271,8 @@ void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &wi
         // it later.. maybe...
         auto newComputeShader = buildComputeShader(normalizedFormat);
         if (!newComputeShader) {
-            qCWarning(BBDX_TEXTURE_COMPARER) << "Failed to load texture compare compute shader";
-            return;
+            qCWarning(BBDX_TEXTURE_COMPARER) << "Failed to build texture compare compute shader";
+            return std::unexpected{Error::BUILD_SHADER_FAILED};
         }
         m_computeShaders.emplace(normalizedFormat, std::move(newComputeShader));
     }
@@ -272,28 +283,48 @@ void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &wi
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
     // bind the textures
+    flushGlErrors();
     glBindImageTexture(0, freshBlit->texture(), 0, GL_FALSE, 0, GL_READ_ONLY, normalizedFormat);
     glBindImageTexture(1, cachedBlit->texture(), 0, GL_FALSE, 0, GL_READ_WRITE, normalizedFormat);
+    if (glGetError() != GL_NO_ERROR) {
+        qCWarning(BBDX_TEXTURE_COMPARER) << "Failed to bind blit textures for comparison";
+        return std::unexpected{Error::BIND_TEXTURE_FAILED};
+    }
 
     // reset and bind counter
+    flushGlErrors();
     const GLuint zero = 0;
     glInvalidateBufferData(counterBuffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, counterBuffer);
     glClearBufferSubData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, 0, sizeof(GLuint), GL_RED_INTEGER, GL_UNSIGNED_INT, &zero);
     // slot 2 - matching compute shader
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, counterBuffer);
+    if (glGetError() != GL_NO_ERROR) {
+        qCWarning(BBDX_TEXTURE_COMPARER) << "Failed to bind counterBuffer for comparison";
+        return std::unexpected{Error::BIND_BUFFER_FAILED};
+    }
 
     // prepare dirtyRegion
     const auto [glDirtyRegion, boundingRect] = localDirtyRegionGL(*paintData.dirtyRegion, *paintData.backgroundRect);
 
+    flushGlErrors();
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, computeShader->dirtyRegionBuffer);
     glBufferData(GL_SHADER_STORAGE_BUFFER, glDirtyRegion.size() * sizeof(ComputeShaderRect), glDirtyRegion.data(), GL_STREAM_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, computeShader->dirtyRegionBuffer);
+    if (glGetError() != GL_NO_ERROR) {
+        qCWarning(BBDX_TEXTURE_COMPARER) << "Failed to bind dirtyRegionBuffer for comparison";
+        return std::unexpected{Error::BIND_BUFFER_FAILED};
+    }
 
     // prepare compute shader
     GLint prevProgram{};
     glGetIntegerv(GL_CURRENT_PROGRAM, &prevProgram);
+    flushGlErrors();
     glUseProgram(computeShader->program);
+    if (glGetError() != GL_NO_ERROR) {
+        qCWarning(BBDX_TEXTURE_COMPARER) << "Failed to bind compute shader for comparison";
+        return std::unexpected{Error::BIND_SHADER_FAILED};
+    }
 
     glUniform1i(computeShader->dirtyRegionRectCountLocation, glDirtyRegion.size());
     glUniform4i(computeShader->dirtyRegionBoundingBoxLocation, boundingRect.x(), boundingRect.y(), boundingRect.width(), boundingRect.height());
@@ -338,9 +369,14 @@ void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &wi
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
     glDepthMask(GL_FALSE);
 
+    flushGlErrors();
     glBeginQuery(GL_ANY_SAMPLES_PASSED, query);
     glDrawArrays(GL_POINTS, 0, 1);
     glEndQuery(GL_ANY_SAMPLES_PASSED);
+    if (glGetError() != GL_NO_ERROR) {
+        qCWarning(BBDX_TEXTURE_COMPARER) << "Texture comparison query failed";
+        return std::unexpected{Error::QUERY_FAILED};
+    }
 
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDepthMask(GL_TRUE);
@@ -351,4 +387,6 @@ void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &wi
     // unbind counterBuffer in reverse order
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    return {};
 }

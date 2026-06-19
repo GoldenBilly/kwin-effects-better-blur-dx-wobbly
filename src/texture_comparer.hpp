@@ -12,6 +12,7 @@
 #include <memory>
 #include <unordered_map>
 #include <array>
+#include <expected>
 
 namespace BBDX {
 
@@ -66,6 +67,17 @@ public:
          * returns nullopt if all query objects are currently busy
          */
         std::optional<std::pair<GLuint, GLuint>> getSlot();
+    };
+
+    /**
+     * Error types returned by e.g. compareAndUpdate()
+     */
+    enum class Error {
+        BUILD_SHADER_FAILED,
+        BIND_TEXTURE_FAILED,
+        BIND_BUFFER_FAILED,
+        BIND_SHADER_FAILED,
+        QUERY_FAILED,
     };
 
     // the Rect struct as used in the compute shader
@@ -136,7 +148,7 @@ public:
      * The result of the comparison can be found using the
      * query object returned by queryObject()
      */
-    void compareAndUpdate(const std::pair<GLuint, GLuint> &windowDataSlot, KWin::GLTexture *freshBlit, KWin::GLTexture *cachedBlit, const BlurCachePaintData &paintData);
+    std::expected<void, Error> compareAndUpdate(const std::pair<GLuint, GLuint> &windowDataSlot, KWin::GLTexture *freshBlit, KWin::GLTexture *cachedBlit, const BlurCachePaintData &paintData);
 };
 
 }
