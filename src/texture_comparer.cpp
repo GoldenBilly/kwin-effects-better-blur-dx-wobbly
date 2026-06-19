@@ -363,20 +363,21 @@ std::expected<void, BBDX::TextureComparer::Error> BBDX::TextureComparer::compare
 
     // "draw" a single point to check the result of
     // the compute shader
+    flushGlErrors();
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
     glDepthMask(GL_FALSE);
 
-    flushGlErrors();
     glBeginQuery(GL_ANY_SAMPLES_PASSED, query);
     glDrawArrays(GL_POINTS, 0, 1);
     glEndQuery(GL_ANY_SAMPLES_PASSED);
+
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_TRUE);
+
     if (glGetError() != GL_NO_ERROR) {
         qCWarning(BBDX_TEXTURE_COMPARER) << "Texture comparison query failed";
         return std::unexpected{Error::QUERY_FAILED};
     }
-
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glDepthMask(GL_TRUE);
 
     KWin::ShaderManager::instance()->popShader();
 
