@@ -306,8 +306,8 @@ void BBDX::TextureComparer::compareAndUpdate(const std::pair<GLuint, GLuint> &wi
     GLuint pixelsChanged{0};
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(GLuint), &pixelsChanged);
     if (pixelsChanged > 0) {
-        if (window) {
-            qCDebug(BBDX_TEXTURE_COMPARER) << "Pixels changed (" << window->windowClass() << "):" << pixelsChanged;
+        if (paintData.window) {
+            qCDebug(BBDX_TEXTURE_COMPARER) << "Pixels changed (" << paintData.window->windowClass() << "):" << pixelsChanged;
         } else {
             qCDebug(BBDX_TEXTURE_COMPARER) << "Pixels changed:" << pixelsChanged;
         }
