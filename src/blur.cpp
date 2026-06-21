@@ -200,8 +200,9 @@ BlurEffect::BlurEffect()
     // BBDX: managed extension objects
     m_windowManager = std::make_unique<BBDX::WindowManager>(this);
 
-    m_blurCache = std::make_unique<BBDX::BlurCache>(this);
-    if (!m_blurCache->ready())
+    m_blurCache = BBDX::BlurCache::create(this);
+    if (!m_blurCache)
+        qCWarning(KWIN_BLUR) << BBDX::LOG_PREFIX << "Failed to create BlurCache";
         return;
 
     m_refractionPass = std::make_unique<BBDX::RefractionPass>();

@@ -175,27 +175,22 @@ void BBDX::BlurCacheLRU::setWindow(KWin::EffectWindow* w) {
     m_windowPID = m_window->pid();
 }
 
-BBDX::BlurCache::BlurCache(BBDX::BlurEffect *effect) {
-    m_effect = effect;
+std::unique_ptr<BBDX::BlurCache> BBDX::BlurCache::create(BBDX::BlurEffect *effect) {
+    std::unique_ptr<BlurCache> blurCache{new BlurCache};
 
-    m_texturePass.shader = KWin::ShaderManager::instance()->generateShaderFromFile(KWin::ShaderTrait::MapTexture,
+    blurCache->m_effect = effect;
+
+    blurCache->m_texturePass.shader = KWin::ShaderManager::instance()->generateShaderFromFile(KWin::ShaderTrait::MapTexture,
                                                                            QStringLiteral(":/effects/better_blur_dx/shaders/vertex.vert"),
                                                                            QStringLiteral(":/effects/better_blur_dx/shaders/texture.frag"));
-    if (!m_texturePass.shader) {
+    if (!blurCache->m_texturePass.shader) {
         qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to load texture pass shader";
-        return;
+        return nullptr;
     } else {
-        m_texturePass.mvpMatrixLocation = m_texturePass.shader->uniformLocation("modelViewProjectionMatrix");
+        blurCache->m_texturePass.mvpMatrixLocation = blurCache->m_texturePass.shader->uniformLocation("modelViewProjectionMatrix");
     }
 
-    /*
-     * TODO: currently disabled due to compatibility issues
-    m_textureComparer = TextureComparer::create();
-    if (!m_textureComparer) {
-        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to create TextureComparer";
-        return;
-    }
-    */
+    return blurCache;
 }
 
 void BBDX::BlurCache::preparePaintData(const KWin::RenderTarget *renderTarget,

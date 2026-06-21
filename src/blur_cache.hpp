@@ -183,17 +183,17 @@ private:
     // !!! preparePaintData() must be called before accessing any of this !!!
     BlurCachePaintData m_paintData{};
 
+    /**
+     * use create()
+     */
+    BlurCache() = default;
+
 public:
     /**
      * Loads and sets up shaders
+     * nullptr on error
      */
-    explicit BlurCache(BlurEffect *effect);
-
-    /**
-     * Check if pass is ready i.e. all shaders loaded
-     */
-    //bool ready() const { return m_texturePass.shader && m_textureComparer; }
-    bool ready() const { return !!m_texturePass.shader; }
+    static std::unique_ptr<BlurCache> create(BlurEffect *effect);
 
     /**
      * Prepare the cache for this paint
