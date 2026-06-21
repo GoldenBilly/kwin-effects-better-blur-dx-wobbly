@@ -1,7 +1,6 @@
 #pragma once
 
 #include "kwin_compat.hpp"
-#include "texture_comparer.hpp"
 
 #include <chrono>
 #include <effect/effect.h>
@@ -27,7 +26,6 @@ namespace KWin {
 
 namespace BBDX {
 class BlurEffect;
-class TextureComparer;
 struct BlurRenderData;
 
 
@@ -112,7 +110,6 @@ public:
 class BlurCacheLRU {
 private:
     std::unique_ptr<BlurCacheEntry> m_entry{};
-    std::unique_ptr<TextureComparer::WindowData> m_textureCompareWindowData{};
     KWin::EffectWindow* m_window{nullptr};
     QString m_windowClass{"unknown unknown"};
     pid_t m_windowPID{-1};
@@ -131,12 +128,6 @@ public:
      * if none exists
      */
     BlurCacheEntry* get();
-
-    /**
-     * Return const pointer to the contained texture compare
-     * region and lazily create it if needed
-     */
-    TextureComparer::WindowData* textureCompareWindowData();
 
     /**
      * Add an entry to the cache, potentially removing the already existing entry.
@@ -186,9 +177,6 @@ private:
 
     // pointer to the managing effect
     BlurEffect *m_effect{nullptr};
-
-    // owned TextureComparer
-    std::unique_ptr<TextureComparer> m_textureComparer{};
 
     // Data used for this specific window paint
     // !!! preparePaintData() must be called before accessing any of this !!!

@@ -4,7 +4,6 @@
 
 #include "blur.h"
 #include "utils.h"
-#include "texture_comparer.hpp"
 
 #include <epoxy/gl.h>
 #include <scene/scene.h>
@@ -111,20 +110,6 @@ void BBDX::BlurCacheEntry::flushed() {
 
 BBDX::BlurCacheEntry* BBDX::BlurCacheLRU::get() {
     return m_entry.get();
-}
-
-BBDX::TextureComparer::WindowData* BBDX::BlurCacheLRU::textureCompareWindowData() {
-    // alloc only happens once per Window+RenderView combination
-    if (!m_textureCompareWindowData) [[unlikely]] {
-        m_textureCompareWindowData = TextureComparer::WindowData::create();
-
-        if (!m_textureCompareWindowData) {
-            qCCritical(BLUR_CACHE) << "Failed to create TextureComparer::WindowData";
-            return nullptr;
-        }
-    }
-
-    return m_textureCompareWindowData.get();
 }
 
 void BBDX::BlurCacheLRU::add(std::unique_ptr<BlurCacheEntry> entry) {

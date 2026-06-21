@@ -616,27 +616,6 @@ bool BlurEffect::supported()
         return false;
     }
 
-    /**
-     * TODO: these requirements mainly exist
-     * for texture compare which is currently skipped
-     * When re-enabling these make sure to
-     * fall back to extension check as especially Nvidia seems
-     * to report older core versions than actually supported
-     *
-    // we require GL 4.3 or GLES 3.1
-    if (context->isOpenGLES()) {
-        if (!context->hasVersion(Version(3, 1))) {
-            qCWarning(KWIN_BLUR) << BBDX::LOG_PREFIX << "Effect unsupported: Requires at least OpenGL ES 3.1";
-            return false;
-        }
-    } else {
-        if (!context->hasVersion(Version(4, 3))) {
-            qCWarning(KWIN_BLUR) << BBDX::LOG_PREFIX << "Effect unsupported: Requires at least OpenGL 4.3";
-            return false;
-        }
-    }
-    */
-
     if (!effects->isOpenGLCompositing()) {
         qCWarning(KWIN_BLUR) << BBDX::LOG_PREFIX << "Effect unsupported: No OpenGL compositing";
         return false;
