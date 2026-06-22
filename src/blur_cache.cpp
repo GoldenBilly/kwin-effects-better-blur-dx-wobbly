@@ -59,7 +59,7 @@ static inline void updateBlitFramebufferFromWallpaper(BBDX::WallpaperData *wallp
                                                       const KWin::Rect &backgroundRect) {
     KWin::GLFramebuffer::pushFramebuffer(wallpaper->framebuffer.get());
     for (const auto &rect : dirtyRegion.rects()) {
-        blitFramebuffer->blitFromFramebuffer(rect.translated(-wallpaper->geometry.topLeft().toPoint()),
+        blitFramebuffer->blitFromFramebuffer(rect.translated(-wallpaper->geometry.scaled(wallpaper->scale).topLeft().toPoint()),
                                              rect.translated(-backgroundRect.topLeft()));
     }
     KWin::GLFramebuffer::popFramebuffer();
