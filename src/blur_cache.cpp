@@ -354,31 +354,30 @@ void BBDX::BlurCache::flushAccumulatedDirtyRegions(KWin::ScreenPrePaintData &dat
                 continue;
             }
 
-            // flush at ~30fps in normal mode
-            std::chrono::milliseconds flushInterval{33};
+            // automatic periodic flush
+            // external flushes are picked up either way
+            switch (m_effect->blitMode()) {
+                case BlitMode::WALLPAPER:
+                    // never flush automatically in wallpaper mode
+                    //
+                    // TODO: we should still flush on some events
+                    // like wallpaper changing
+                    break;
 
-            // or once a second in wallpaper only mode
-            // (to still pick up wallpaper changes
-            // would be prettier to catch some "Wallpaper changed"
-            // and then delay flushes even further)
-            if (m_effect->blitMode() == BlitMode::WALLPAPER) {
-                flushInterval = std::chrono::milliseconds{1000};
+                default:
+                    // flush at ~30fps in normal mode
+                    std::chrono::milliseconds flushInterval{33};
+                    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - cacheEntry->lastFlush());
+                    if (elapsed > flushInterval) {
+                        cacheEntry->flush();
+                    }
             }
 
-            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - cacheEntry->lastFlush());
-            if (elapsed < flushInterval) {
-                continue;
+            if (cacheEntry->isFlushing()) {
+                for (const auto &rect : cacheEntry->accumulatedDirtyRegion().rects()) {
+                    data.paint |= rect;
+                }
             }
-
-            for (const auto &rect : cacheEntry->accumulatedDirtyRegion().rects()) {
-                data.paint |= rect;
-            }
-
-            // we'll always flush here
-            // it should essentially be a no-op if there was no
-            // accumulatedDirtyRegion but ensures prepareCache()
-            // still checks new dirtyRegion ASAP when the timer elapsed
-            cacheEntry->flush();
         }
     }
 }
