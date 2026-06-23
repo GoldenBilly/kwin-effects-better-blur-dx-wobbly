@@ -151,6 +151,7 @@ private:
         int halfpixelLocation;
     } m_onscreenPass;
 
+#if BBDX_NOT_NEEDED
     struct
     {
         std::unique_ptr<GLShader> shader;
@@ -162,6 +163,7 @@ private:
         int cornerRadiusLocation;
         int opacityLocation;
     } m_roundedOnscreenPass;
+#endif
 
     struct
     {

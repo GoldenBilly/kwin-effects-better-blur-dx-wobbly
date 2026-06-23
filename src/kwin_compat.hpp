@@ -8,6 +8,11 @@
 
 #include "kwin_version.hpp" // IWYU pragma: export
 
+/**
+ * Helper macro for #if BETTERBLUR_NOT_NEEDED <...> #endif
+ */
+#define BBDX_NOT_NEEDED 0
+
 #if defined(BETTERBLUR_X11)
 #   include "kwin_compat_x11.hpp" // IWYU pragma: export
 #endif

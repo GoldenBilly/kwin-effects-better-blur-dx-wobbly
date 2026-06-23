@@ -72,8 +72,6 @@
 #include <optional>
 #include <utility>
 
-#define BETTERBLUR_NOT_NEEDED 0
-
 Q_LOGGING_CATEGORY(KWIN_BLUR, "kwin_effect_better_blur_dx", QtInfoMsg)
 
 static void ensureResources()
@@ -146,6 +144,7 @@ BlurEffect::BlurEffect()
         m_onscreenPass.halfpixelLocation = m_onscreenPass.shader->uniformLocation("halfpixel");
     }
 
+#if BBDX_NOT_NEEDED
     m_roundedOnscreenPass.shader = ShaderManager::instance()->generateShaderFromFile(ShaderTrait::MapTexture,
                                                                                      QStringLiteral(":/effects/better_blur_dx/shaders/onscreen_rounded.vert"),
                                                                                      QStringLiteral(":/effects/better_blur_dx/shaders/onscreen_rounded.frag"));
@@ -161,6 +160,7 @@ BlurEffect::BlurEffect()
         m_roundedOnscreenPass.cornerRadiusLocation = m_roundedOnscreenPass.shader->uniformLocation("cornerRadius");
         m_roundedOnscreenPass.opacityLocation = m_roundedOnscreenPass.shader->uniformLocation("opacity");
     }
+#endif
 
     m_downsamplePass.shader = ShaderManager::instance()->generateShaderFromFile(ShaderTrait::MapTexture,
                                                                                 QStringLiteral(":/effects/better_blur_dx/shaders/vertex.vert"),
@@ -586,7 +586,7 @@ bool BlurEffect::eventFilter(QObject *watched, QEvent *event)
 
 bool BlurEffect::enabledByDefault()
 {
-#if BETTERBLUR_NOT_NEEDED
+#if BBDX_NOT_NEEDED
     const auto context = effects->openglContext();
     if (!context || context->isSoftwareRenderer()) {
         return false;
@@ -1029,7 +1029,7 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
 #else
     const Region dirtyRegion = viewport.mapFromDeviceCoordinatesContained(deviceRegion) & backgroundRect;
 #endif
-#if BETTERBLUR_NOT_NEEDED
+#if BBDX_NOT_NEEDED
     for (const Rect &dirtyRect : dirtyRegion.rects()) {
         renderInfo.framebuffers[0]->blitFromRenderTarget(renderTarget, viewport, dirtyRect, dirtyRect.translated(-backgroundRect.topLeft()));
     }
@@ -1231,7 +1231,7 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
 #endif
     const float modulation = opacity * opacity;
 
-#if BETTERBLUR_NOT_NEEDED
+#if BBDX_NOT_NEEDED
     if (const BorderRadius cornerRadius = w->window()->borderRadius(); !cornerRadius.isNull()) {
         ShaderManager::instance()->pushShader(m_roundedOnscreenPass.shader.get());
 
@@ -1304,7 +1304,7 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
         BBDX::setTextureSwizzle(read->colorAttachment());
         read->colorAttachment()->bind();
 
-#if BETTERBLUR_NOT_NEEDED
+#if BBDX_NOT_NEEDED
         if (modulation < 1.0) {
             glEnable(GL_BLEND);
             glBlendColor(0, 0, 0, modulation);
@@ -1315,14 +1315,14 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
         // BBDX:
         m_blurCache->drawToCache(renderInfo.cache.get(), vbo);
 
-#if BETTERBLUR_NOT_NEEDED
+#if BBDX_NOT_NEEDED
         if (modulation < 1.0) {
             glDisable(GL_BLEND);
         }
 #endif
 
         ShaderManager::instance()->popShader();
-#if BETTERBLUR_NOT_NEEDED
+#if BBDX_NOT_NEEDED
     }
 #endif
 
@@ -1331,13 +1331,13 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
         // artifacts, which often happens due to the smooth color transitions in the blurred image.
 
         glEnable(GL_BLEND);
-#if BETTERBLUR_NOT_NEEDED
+#if BBDX_NOT_NEEDED
         if (opacity < 1.0) {
             glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE);
         } else {
 #endif
             glBlendFunc(GL_ONE, GL_ONE);
-#if BETTERBLUR_NOT_NEEDED
+#if BBDX_NOT_NEEDED
         }
 #endif
 
