@@ -827,12 +827,12 @@
         <widget class="QComboBox" name="kcfg_BlitMode">
          <item>
           <property name="text">
-           <string>Render Target</string>
+           <string>Full</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>Wallpaper</string>
+           <string>Wallpaper [EXPERIMENTAL]</string>
           </property>
          </item>
         </widget>
