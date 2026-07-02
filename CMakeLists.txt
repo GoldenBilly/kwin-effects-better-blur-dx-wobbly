@@ -24,20 +24,14 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose Release or Debug" FORCE)
 endif()
 
-# User build options
+# user build options
 option(BBDX_X11 "Build Better Blur DX for KWin X11 instead of KWin Wayland" OFF)
 option(BBDX_DEBUG "Enable extra code paths useful for debugging (Warning: major performance impact)" OFF)
 
 # deprecated build options
-option(BETTERBLUR_X11 "Deprecated alias for BBDX_X11" OFF)
-
-if(BETTERBLUR_X11)
+if(DEFINED BETTERBLUR_X11)
     message(DEPRECATION "The BETTERBLUR_X11 build option is deprecated - use BBDX_X11 instead")
-
-    if (NOT BBDX_X11)
-        set(BBDX_X11 ON CACHE BOOL "Build Better Blur DX for KWin X11 instead of KWin Wayland" FORCE)
-    endif()
-
+    set(BBDX_X11 ${BETTERBLUR_X11})
     unset(BETTERBLUR_X11 CACHE)
 endif()
 
