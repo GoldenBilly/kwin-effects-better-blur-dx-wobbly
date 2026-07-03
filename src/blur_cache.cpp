@@ -25,6 +25,7 @@
 
 #include <QLoggingCategory>
 #include <QVector2D>
+#include <QDBusConnection>
 #include <QtNumeric>
 
 #include <chrono>
@@ -185,6 +186,17 @@ void BBDX::BlurCacheEntry::invalidate(const char* msg) {
     }
 }
 
+void BBDX::BlurCache::slotWallpaperChanged(uint screenNum) {
+    Q_UNUSED(screenNum);
+
+    // technically only droppping the ones matching
+    // screenNum would be fine but I couldn't find that
+    // number in RenderView/ LogicalOutput so let's just drop
+    // all (wallpaper changes should be infrequent enough for
+    // this to not really matter either way)
+    m_wallpapers.clear();
+}
+
 std::unique_ptr<BBDX::BlurCache> BBDX::BlurCache::create(BBDX::BlurEffect *effect) {
     std::unique_ptr<BlurCache> blurCache{new BlurCache};
 
@@ -202,6 +214,26 @@ std::unique_ptr<BBDX::BlurCache> BBDX::BlurCache::create(BBDX::BlurEffect *effec
     } else {
         blurCache->m_texturePass.mvpMatrixLocation = blurCache->m_texturePass.shader->uniformLocation("modelViewProjectionMatrix");
         blurCache->m_texturePass.modulationLocation = blurCache->m_texturePass.shader->uniformLocation("modulation");
+    }
+
+    auto sessionBus = std::make_unique<QDBusConnection>(QDBusConnection::sessionBus());
+    if (!sessionBus->isConnected()) {
+        // not fatal but we won't be able to detect wallpaper changes
+        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Could not connect to D-Bus session bus";
+    } else {
+        if (sessionBus->connect(
+            "org.kde.plasmashell",
+            "/PlasmaShell",
+            "org.kde.PlasmaShell",
+            "wallpaperChanged",
+            blurCache.get(),
+            SLOT(BlurCache::slotWallpaperChanged(uint))
+        )){
+            qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "org.kde.PlasmaShell.wallpaperChanged connection ready";
+            blurCache->m_sessionBus = std::move(sessionBus);
+        } else {
+            qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "org.kde.PlasmaShell.wallpaperChanged connection failed";
+        }
     }
 
     return blurCache;

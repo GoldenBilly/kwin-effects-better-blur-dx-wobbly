@@ -7,6 +7,9 @@
 #include <effect/effect.h>
 #include <epoxy/gl.h>
 
+#include <QDBusConnection>
+#include <QObject>
+
 #include <effect/effectwindow.h>
 #include <opengl/glframebuffer.h>
 #include <opengl/glshader.h>
@@ -182,7 +185,8 @@ struct WallpaperData {
     std::unique_ptr<KWin::GLTexture> texture;
 };
 
-class BlurCache {
+class BlurCache : public QObject {
+    Q_OBJECT
 private:
     struct {
         std::unique_ptr<KWin::GLShader> shader;
@@ -203,9 +207,21 @@ private:
     std::unordered_map<KWin::RenderView *, WallpaperData> m_wallpapers{};
 
     /**
+     * Session bus connection
+     */
+    std::unique_ptr<QDBusConnection> m_sessionBus{};
+
+    /**
      * use create()
      */
     BlurCache() = default;
+
+public Q_SLOTS:
+    /**
+     * org.kde.PlasmaShell.wallpaperChanged() event from
+     * PlasmaShell DBUS interface
+     */
+    void slotWallpaperChanged(uint screenNum);
 
 public:
     /**
