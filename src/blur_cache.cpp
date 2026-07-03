@@ -188,6 +188,30 @@ void BBDX::BlurCacheEntry::invalidate(const char* msg) {
     }
 }
 
+
+void BBDX::BlurCache::slotDbusRegisteredPlasmashell() {
+    qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX << "PlasmaShell registered on D-Bus - setting up connection";
+
+    m_plasmashellInterface = std::make_unique<QDBusInterface>(
+        "org.kde.plasmashell",
+        "/PlasmaShell",
+        "org.kde.PlasmaShell",
+        QDBusConnection::sessionBus()
+    );
+
+    if (!m_plasmashellInterface->isValid()) {
+        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX
+                              << "org.kde.PlasmaShell D-Bus connection failed:"
+                              << m_plasmashellInterface->lastError().message();
+        return;
+    }
+
+    connect(m_plasmashellInterface.get(),
+            SIGNAL(wallpaperChanged(uint)),
+            this,
+            SLOT(slotWallpaperChanged(uint)));
+}
+
 void BBDX::BlurCache::slotWallpaperChanged(uint screenNum) {
     Q_UNUSED(screenNum);
 
@@ -221,25 +245,17 @@ std::unique_ptr<BBDX::BlurCache> BBDX::BlurCache::create(BBDX::BlurEffect *effec
         blurCache->m_texturePass.modulationLocation = blurCache->m_texturePass.shader->uniformLocation("modulation");
     }
 
-    auto plasmashellInterface = std::make_unique<QDBusInterface>(
+    blurCache->m_dbusServiceWatcher = std::make_unique<QDBusServiceWatcher>(
         "org.kde.plasmashell",
-        "/PlasmaShell",
-        "org.kde.PlasmaShell",
-        QDBusConnection::sessionBus()
+        QDBusConnection::sessionBus(),
+        QDBusServiceWatcher::WatchForRegistration
     );
 
-    if (plasmashellInterface->isValid()) {
-        connect(plasmashellInterface.get(),
-                SIGNAL(wallpaperChanged(uint)),
-                blurCache.get(),
-                SLOT(slotWallpaperChanged(uint)));
-
-        blurCache->m_plasmashellInterface = std::move(plasmashellInterface);
-    } else {
-        qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX
-                              << "org.kde.PlasmaShell D-Bus connection failed:\n"
-                              << plasmashellInterface->lastError().message();
-    }
+    connect(blurCache->m_dbusServiceWatcher.get(),
+            &QDBusServiceWatcher::serviceRegistered,
+            blurCache.get(),
+            &BlurCache::slotDbusRegisteredPlasmashell
+    );
 
     return blurCache;
 }

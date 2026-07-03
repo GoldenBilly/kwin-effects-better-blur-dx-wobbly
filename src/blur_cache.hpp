@@ -8,6 +8,7 @@
 #include <epoxy/gl.h>
 
 #include <QDBusInterface>
+#include <QDBusServiceWatcher>
 #include <QObject>
 
 #include <effect/effectwindow.h>
@@ -207,6 +208,11 @@ private:
     std::unordered_map<KWin::RenderView *, WallpaperData> m_wallpapers{};
 
     /**
+     * D-Bus service watcher to setup PlasmaShell interface
+     */
+    std::unique_ptr<QDBusServiceWatcher> m_dbusServiceWatcher{};
+
+    /**
      * Session bus connection to org.kde.plasmashell /PlasmaShell
      */
     std::unique_ptr<QDBusInterface> m_plasmashellInterface{};
@@ -217,6 +223,11 @@ private:
     BlurCache() = default;
 
 public Q_SLOTS:
+    /**
+     * slot for notification when PlasmaShell registers on D-Bus
+     */
+    void slotDbusRegisteredPlasmashell();
+
     /**
      * org.kde.PlasmaShell.wallpaperChanged() event from
      * PlasmaShell DBUS interface
