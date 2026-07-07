@@ -41,6 +41,12 @@ class BlurCacheEntry {
     std::unique_ptr<KWin::GLFramebuffer> m_cachedFramebuffer{nullptr};
 
     /**
+     * Region that has cached data
+     * Updated by flushed()
+     */
+    KWin::Region m_cachedRegion{};
+
+    /**
      * backgroundRect behind this cache entry
      * updated by BlurCache::preparePaintData()
      */
@@ -114,7 +120,7 @@ public:
      */
     void flush();
     void abortFlush(const char *msg = nullptr);
-    void flushed();
+    void flushed(const KWin::Region &dirtyRegion);
 
     /**
      * Invalidate cache entry
