@@ -174,6 +174,7 @@ public:
      * Flush all caches of all windows
      */
     void flushAllWindowCaches() const;
+    void flushAllWindowCachesFor(std::chrono::milliseconds duration) const;
 };
 
 } // namespace KWin

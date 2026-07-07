@@ -207,15 +207,10 @@ void BBDX::BlurCache::slotDbusRegisteredPlasmashell() {
 void BBDX::BlurCache::slotWallpaperChanged(uint screenNum) {
     Q_UNUSED(screenNum);
 
-    // technically only droppping the ones matching
-    // screenNum would be fine but I couldn't find that
-    // number in RenderView/ LogicalOutput so let's just drop
-    // all (wallpaper changes should be infrequent enough for
-    // this to not really matter either way)
-    m_wallpapers.clear();
-
     // now flush and implicitly fetch new wallpaper
-    m_effect->windowManager()->flushAllWindowCaches();
+    // 5 seconds should hopefully be enough time
+    // for the wallpaper transition
+    m_effect->windowManager()->flushAllWindowCachesFor(std::chrono::milliseconds{5000});
 }
 
 std::unique_ptr<BBDX::BlurCache> BBDX::BlurCache::create(BBDX::BlurEffect *effect) {
