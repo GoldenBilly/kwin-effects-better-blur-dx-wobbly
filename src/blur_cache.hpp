@@ -123,7 +123,7 @@ public:
      *
      * While flushing abort with abortFlush() or complete with flushed()
      */
-    void flush();
+    void flush(const char *msg = nullptr);
     void abortFlush(const char *msg = nullptr);
     void flushed(const KWin::Region &dirtyRegion);
 

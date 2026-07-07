@@ -122,20 +122,30 @@ void BBDX::BlurCacheEntry::accumulateDirtyRegion(const KWin::Region &dirtyRegion
     m_accumulatedDirtyRegion &= m_backgroundRect;
 }
 
-void BBDX::BlurCacheEntry::flush() {
+void BBDX::BlurCacheEntry::flush(const char *msg) {
+    if (m_isFlushing) return;
+
     m_isFlushing = true;
+
+    if (msg) {
+        qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
+                            << "Triggered flush:" << m_windowClass << "\n"
+                            << "PID:" << m_windowPID << "\n"
+                            << "Reason:" << msg;
+    }
 }
 
 
 void BBDX::BlurCacheEntry::abortFlush(const char *msg) {
-    if (m_isFlushing) {
-        m_isFlushing = false;
-        if (msg) {
-            qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
-                                << "Aborted flush:" << m_windowClass << "\n"
-                                << "PID:" << m_windowPID << "\n"
-                                << "Reason:" << msg;
-        }
+    if (!m_isFlushing) return;
+
+    m_isFlushing = false;
+
+    if (msg) {
+        qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
+                            << "Aborted flush:" << m_windowClass << "\n"
+                            << "PID:" << m_windowPID << "\n"
+                            << "Reason:" << msg;
     }
 }
 
