@@ -103,6 +103,16 @@ std::unique_ptr<BBDX::BlurCacheEntry> BBDX::BlurCacheEntry::create(const KWin::R
     return entry;
 }
 
+bool BBDX::BlurCacheEntry::isCached(const KWin::Region &dirtyRegion) const {
+    for (const auto &rect : dirtyRegion.rects()) {
+        if (!m_cachedRegion.contains(rect.translated(-m_backgroundRect.topLeft()))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void BBDX::BlurCacheEntry::accumulateDirtyRegion(const KWin::Region &dirtyRegion) {
     for (const auto &rect : dirtyRegion.rects()) {
         m_accumulatedDirtyRegion |= rect;

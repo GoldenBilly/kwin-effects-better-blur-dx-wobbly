@@ -109,6 +109,11 @@ public:
     BlurCacheEntry& operator=(BlurCacheEntry &other) = delete;
 
     /**
+     * Check if the dirtyRegion is fully cached
+     */
+    bool isCached(const KWin::Region &dirtyRegion) const;
+
+    /**
      * Add dirtyRegion to accumulatedDirtyRegion
      */
     void accumulateDirtyRegion(const KWin::Region &dirtyRegion);
