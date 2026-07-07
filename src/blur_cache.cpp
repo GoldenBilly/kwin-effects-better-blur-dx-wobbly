@@ -283,8 +283,15 @@ void BBDX::BlurCache::drawCached(const KWin::RenderViewport &viewport, BBDX::Blu
 void BBDX::BlurCache::drawToCache(BBDX::BlurCacheEntry *cache, KWin::GLVertexBuffer *vbo) const {
     auto cachedFramebuffer = cache->cachedFramebuffer();
     KWin::GLFramebuffer::pushFramebuffer(cachedFramebuffer);
-    BBDX::setGLScissor(*m_paintData.dirtyRegion, *m_paintData.backgroundRect);
-    vbo->draw(GL_TRIANGLES, vboStartCache(), vboCountCache());
+
+    // drawing to cache needs to match dirtyRegion exactly, not just
+    // a bounding rect or we destroy other cached content
+    //
+    // TODO: maybe custom VBO for this instead of scissor?
+    for (const auto &rect : m_paintData.dirtyRegion->rects()) {
+        BBDX::setGLScissor(KWin::Region{rect}, *m_paintData.backgroundRect);
+        vbo->draw(GL_TRIANGLES, vboStartCache(), vboCountCache());
+    }
     KWin::GLFramebuffer::popFramebuffer();
 }
 
