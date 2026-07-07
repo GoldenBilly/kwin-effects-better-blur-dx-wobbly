@@ -103,7 +103,7 @@ std::unique_ptr<BBDX::BlurCacheEntry> BBDX::BlurCacheEntry::create(const KWin::R
     return entry;
 }
 
-bool BBDX::BlurCacheEntry::isCached(const KWin::Region &dirtyRegion) const {
+bool BBDX::BlurCacheEntry::hasCachedRegion(const KWin::Region &dirtyRegion) const {
     for (const auto &rect : dirtyRegion.rects()) {
         if (!m_cachedRegion.contains(rect.translated(-m_backgroundRect.topLeft()))) {
             return false;
@@ -226,6 +226,13 @@ void BBDX::BlurCache::preparePaintData(const KWin::RenderTarget *renderTarget,
     // the cache entry needs to stay in sync
     cache->setBackgroundRect(*backgroundRect);
     cache->accumulateDirtyRegion(*dirtyRegion);
+
+    // in case the initial cache entry
+    // was only partially filled we always need a flush
+    // to not draw uncached regions
+    if (!cache->hasCachedRegion(*dirtyRegion)) {
+        cache->flush();
+    }
 
     // still not sure if dirtyRegion can even end up empty
     // but if it is a flush would always end up taking the cache anyway

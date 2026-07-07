@@ -111,7 +111,7 @@ public:
     /**
      * Check if the dirtyRegion is fully cached
      */
-    bool isCached(const KWin::Region &dirtyRegion) const;
+    bool hasCachedRegion(const KWin::Region &dirtyRegion) const;
 
     /**
      * Add dirtyRegion to accumulatedDirtyRegion
