@@ -31,8 +31,8 @@ std::unique_ptr<BBDX::RoundedCornersPass> BBDX::RoundedCornersPass::create() {
 
     pass->m_shader = KWin::ShaderManager::instance()->generateShaderFromFile(
         KWin::ShaderTrait::MapTexture,
-        BBDX::shaderFilePath(QStringLiteral(":/effects/better_blur_dx/shaders/rounded_corners.vert")),
-        BBDX::shaderFilePath(QStringLiteral(":/effects/better_blur_dx/shaders/rounded_corners.frag"))
+        BBDX::shaderFilePath(":/effects/better_blur_dx/shaders/rounded_corners.vert"),
+        BBDX::shaderFilePath(":/effects/better_blur_dx/shaders/rounded_corners.frag")
     );
 
     if (!pass->m_shader) {

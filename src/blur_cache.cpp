@@ -180,8 +180,8 @@ std::unique_ptr<BBDX::BlurCache> BBDX::BlurCache::create(BBDX::BlurEffect *effec
 
     blurCache->m_texturePass.shader = KWin::ShaderManager::instance()->generateShaderFromFile(
         KWin::ShaderTrait::MapTexture,
-        BBDX::shaderFilePath(QStringLiteral(":/effects/better_blur_dx/shaders/vertex.vert")),
-        BBDX::shaderFilePath(QStringLiteral(":/effects/better_blur_dx/shaders/texture.frag"))
+        BBDX::shaderFilePath(":/effects/better_blur_dx/shaders/vertex.vert"),
+        BBDX::shaderFilePath(":/effects/better_blur_dx/shaders/texture.frag")
     );
 
     if (!blurCache->m_texturePass.shader) {

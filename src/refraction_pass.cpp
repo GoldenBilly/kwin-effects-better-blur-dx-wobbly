@@ -23,8 +23,8 @@ std::unique_ptr<BBDX::RefractionPass> BBDX::RefractionPass::create() {
 
     pass->m_shader = KWin::ShaderManager::instance()->generateShaderFromFile(
         KWin::ShaderTrait::MapTexture,
-        BBDX::shaderFilePath(QStringLiteral(":/effects/better_blur_dx/shaders/vertex.vert")),
-        BBDX::shaderFilePath(QStringLiteral(":/effects/better_blur_dx/shaders/refraction.frag"))
+        BBDX::shaderFilePath(":/effects/better_blur_dx/shaders/vertex.vert"),
+        BBDX::shaderFilePath(":/effects/better_blur_dx/shaders/refraction.frag")
     );
 
     if (!pass->m_shader) {

@@ -63,6 +63,6 @@ void clearGLScissor();
  * Plasma >=6.7 only wants the "core" shader and downgrades it internally
  * by injecting helper funtions
  */
-QString shaderFilePath(QString shader);
+QString shaderFilePath(const char *path);
 
 }
