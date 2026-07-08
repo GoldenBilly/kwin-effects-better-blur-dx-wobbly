@@ -1010,7 +1010,7 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
         renderInfo.textures.clear();
         // BBDX:
         if (renderInfo.cache) {
-            renderInfo.cache->invalidate("New framebuffers required");
+            renderInfo.cache->invalidate(static_cast<uint>(BlurCacheInvalidationFlag::FULL), "New framebuffers required");
         }
 
         glClearColor(0, 0, 0, 0);

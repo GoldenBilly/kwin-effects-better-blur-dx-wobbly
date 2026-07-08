@@ -32,6 +32,20 @@ namespace BBDX {
 class BlurEffect;
 struct BlurRenderData;
 
+// options for cache invalidation mask
+enum class BlurCacheInvalidationFlag : uint {
+    /**
+     * mark cache completely invalid
+     * causing a drop and subsequent creation of fresh entry
+     */
+    FULL = 1 << 0,
+
+    /**
+     * only clear cachedRegion
+     * causing that area to be flushed
+     */
+    REGION = 1 << 1,
+};
 
 /**
  * A single valid entry
@@ -148,8 +162,10 @@ public:
 
     /**
      * Invalidate cache entry
+     *
+     * Flags indicate what should be invalidated
      */
-    void invalidate(const char *msg = nullptr);
+    void invalidate(uint flags = static_cast<uint>(BlurCacheInvalidationFlag::FULL), const char *msg = nullptr);
 
     /**
      * Setters

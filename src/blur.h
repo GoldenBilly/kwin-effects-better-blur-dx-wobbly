@@ -245,7 +245,7 @@ private:
 
     std::unique_ptr<BBDX::WindowManager> m_windowManager{};
     friend void BBDX::WindowManager::triggerBlurRegionUpdate(KWin::EffectWindow *w) const;
-    friend void BBDX::WindowManager::invalidateBlurCache(KWin::EffectWindow *w, const char *reason) const;
+    friend void BBDX::WindowManager::invalidateBlurCache(KWin::EffectWindow *w, uint flags, const char *reason) const;
     friend void BBDX::WindowManager::flushWindowCaches(BBDX::Window *window) const;
     friend void BBDX::WindowManager::flushWindowCachesFor(BBDX::Window *window, std::chrono::milliseconds duration) const;
     std::unique_ptr<BBDX::BlurCache> m_blurCache{};

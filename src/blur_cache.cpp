@@ -173,15 +173,28 @@ void BBDX::BlurCacheEntry::maybeExtendFlush() {
     }
 }
 
-void BBDX::BlurCacheEntry::invalidate(const char* msg) {
-    if (!m_valid) return;
+void BBDX::BlurCacheEntry::invalidate(uint flags, const char* msg) {
+    QStringList flagsHandled{};
 
-    m_valid = false;
+    if (flags & static_cast<uint>(BlurCacheInvalidationFlag::FULL)) {
+        if (m_valid) {
+            m_valid = false;
+            flagsHandled += "FULL";
+        }
+    }
 
-    if (msg) {
+    if (flags & static_cast<uint>(BlurCacheInvalidationFlag::REGION)) {
+        if (!m_cachedRegion.isEmpty()) {
+            m_cachedRegion = KWin::Region{};
+            flagsHandled += "REGION";
+        }
+    }
+
+    if (msg && !flagsHandled.empty()) {
         qCDebug(BLUR_CACHE) << BBDX::LOG_PREFIX
                             << "Invalidated cache:" << m_windowClass << "\n"
                             << "PID:" << m_windowPID << "\n"
+                            << "Flags:" << flagsHandled.join(",") << "\n"
                             << "Reason:" << msg;
     }
 }

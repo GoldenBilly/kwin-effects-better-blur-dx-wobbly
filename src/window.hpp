@@ -193,11 +193,6 @@ public:
     bool isBlurred() const;
 
     /**
-     * Invalidate the blur cache for this window
-     */
-    void invalidateBlurCache(const char *reason) const;
-
-    /**
      * operator to facilitate logging of windows
      */
     friend QDebug operator<<(QDebug &debug, const Window &window);

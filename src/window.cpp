@@ -223,10 +223,6 @@ void BBDX::Window::triggerBlurRegionUpdate() const {
     m_windowManager->triggerBlurRegionUpdate(m_effectwindow);
 }
 
-void BBDX::Window::invalidateBlurCache(const char *reason) const {
-    m_windowManager->invalidateBlurCache(m_effectwindow, reason);
-}
-
 bool BBDX::Window::opacityChangedFromOriginal() {
     if (effectwindow()->window()->isActive()) {
         return !qFuzzyCompare(m_originalOpacityActive.value_or(1.0), effectwindow()->opacity());
@@ -356,7 +352,9 @@ void BBDX::Window::reconfigure() {
     m_userBorderRadius = m_windowManager->userBorderRadius();
 
     slotWindowOpacityChanged(effectwindow(), 0.0, effectwindow()->opacity());
-    invalidateBlurCache("Reconfigured window");
+    m_windowManager->invalidateBlurCache(m_effectwindow,
+                                         static_cast<uint>(BlurCacheInvalidationFlag::REGION),
+                                         "Reconfigured window");
     updateForceBlurRegion();
 }
 
