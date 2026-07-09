@@ -126,14 +126,17 @@ void BlurEffectConfig::setupConstraints() {
 #endif
 
     // wallpaper mode expects the cache
+    // and doesn't care about the flush interval
     auto slotBlitModeChanged = [this](int index) {
         switch (static_cast<BBDX::BlitMode>(index)) {
             case BBDX::BlitMode::WALLPAPER:
                 ui.kcfg_BlurCacheIgnore->setEnabled(false);
+                ui.kcfg_BlurCacheRateLimit->setEnabled(false);
                 break;
 
             default:
                 ui.kcfg_BlurCacheIgnore->setEnabled(true);
+                ui.kcfg_BlurCacheRateLimit->setEnabled(true);
                 break;
         }
     };
