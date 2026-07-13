@@ -4,7 +4,7 @@ This fork of Better Blur DX adds the Better Wobbly Windows inter-effect mesh API
 Better Blur DX still owns blur generation and the final composite; Better Wobbly
 Windows supplies only the deformed window geometry.
 
-See [Better Wobbly Windows](MUST-FIX-LINK)
+See [Better Wobbly Windows](https://github.com/GoldenBilly/BetterWobblyWindows)
 
 The versioned inter-effect API is documented in
 [`docs/inter-effect-api.md`](docs/inter-effect-api.md). It lets another KWin
