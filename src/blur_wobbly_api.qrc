@@ -1,0 +1,28 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource prefix="/effects/better_blur_dx_wobbly_api/">
+  <file>shaders/downsample.frag</file>
+  <file>shaders/downsample_core.frag</file>
+  <file>shaders/noise.frag</file>
+  <file>shaders/noise_core.frag</file>
+  <file>shaders/onscreen.frag</file>
+  <file>shaders/onscreen_core.frag</file>
+  <file>shaders/onscreen_rounded_core.frag</file>
+  <file>shaders/onscreen_rounded.frag</file>
+  <file>shaders/onscreen_rounded_core.vert</file>
+  <file>shaders/onscreen_rounded.vert</file>
+  <file>shaders/refraction.frag</file>
+  <file>shaders/refraction_core.frag</file>
+  <file>shaders/rounded_corners_core.frag</file>
+  <file>shaders/rounded_corners.frag</file>
+  <file>shaders/rounded_corners_core.vert</file>
+  <file>shaders/rounded_corners.vert</file>
+  <file>shaders/texture_core.frag</file>
+  <file>shaders/texture.frag</file>
+  <file>shaders/upsample.frag</file>
+  <file>shaders/upsample_core.frag</file>
+  <file>shaders/vertex.vert</file>
+  <file>shaders/vertex_core.vert</file>
+  <file>shaders/wobbly_composite.frag</file>
+  <file>shaders/wobbly_composite_core.frag</file>
+</qresource>
+</RCC>

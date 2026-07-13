@@ -11,7 +11,7 @@
 
 #include <algorithm>
 
-Q_LOGGING_CATEGORY(REFRACTION_PASS, "kwin_effect_better_blur_dx.refraction_pass", QtInfoMsg)
+Q_LOGGING_CATEGORY(REFRACTION_PASS, "kwin_effect_better_blur_dx_wobbly_api.refraction_pass", QtInfoMsg)
 
 std::unique_ptr<BBDX::RefractionPass> BBDX::RefractionPass::create() {
     // The vertex shaders should always be the one of the
@@ -23,8 +23,8 @@ std::unique_ptr<BBDX::RefractionPass> BBDX::RefractionPass::create() {
 
     pass->m_shader = KWin::ShaderManager::instance()->generateShaderFromFile(
         KWin::ShaderTrait::MapTexture,
-        BBDX::shaderFilePath(":/effects/better_blur_dx/shaders/vertex.vert"),
-        BBDX::shaderFilePath(":/effects/better_blur_dx/shaders/refraction.frag")
+        BBDX::shaderFilePath(":/effects/better_blur_dx_wobbly_api/shaders/vertex.vert"),
+        BBDX::shaderFilePath(":/effects/better_blur_dx_wobbly_api/shaders/refraction.frag")
     );
 
     if (!pass->m_shader) {

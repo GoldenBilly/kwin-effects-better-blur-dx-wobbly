@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16.0)
 
-project(kwin_better_blur_dx
+project(kwin_better_blur_dx_wobbly_api
     VERSION 2.5.1
     LANGUAGES CXX
 )
@@ -13,11 +13,11 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CPACK_PACKAGE_NAME "kwin-better-blur-dx")
+set(CPACK_PACKAGE_NAME "kwin-better-blur-dx-wobbly-api")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
-set(CPACK_PACKAGE_FILE_NAME "kwin-better-blur-dx")
+set(CPACK_PACKAGE_FILE_NAME "kwin-better-blur-dx-wobbly-api")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Fork of kwin-better-blur, which itself is a fork of the default KDE Blur that includes useful additions, with continued development")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Better Blur DX fork with the Better Wobbly Windows inter-effect mesh API v1")
 include(CPack)
 
 if(NOT CMAKE_BUILD_TYPE)

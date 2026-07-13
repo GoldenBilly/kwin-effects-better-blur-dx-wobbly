@@ -8,7 +8,7 @@
 }:
 
 stdenv.mkDerivation rec {
-  pname = "kwin-better-blur";
+  pname = "kwin-better-blur-dx-wobbly-api";
   version = "2.5.1";
 
   src = ./..;

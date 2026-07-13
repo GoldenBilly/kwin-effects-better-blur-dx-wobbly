@@ -5,7 +5,7 @@
 To enable debug logs set the following environment variable for Kwin:
 
 ```ini
-QT_LOGGING_RULES=kwin_effect_better_blur_dx.*.debug=true
+QT_LOGGING_RULES=kwin_effect_better_blur_dx_wobbly_api.*.debug=true
 ```
 
 When using systemd you can do this using a drop-in for the user-unit `plasma-kwin_{wayland,x11}.service`:
@@ -16,7 +16,7 @@ When using systemd you can do this using a drop-in for the user-unit `plasma-kwi
 # X11:
 # ~/.config/systemd/user/plasma-kwin_x11.service.d/bbdx_debug.conf
 [Service]
-Environment=QT_LOGGING_RULES=kwin_effect_better_blur_dx.*.debug=true
+Environment=QT_LOGGING_RULES=kwin_effect_better_blur_dx_wobbly_api.*.debug=true
 ```
 
 Then (after reloading the session e.g. through logout+login) debug logs should be available via `journalctl`.

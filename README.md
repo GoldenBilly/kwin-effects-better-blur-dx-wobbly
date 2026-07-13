@@ -1,4 +1,16 @@
-# Better Blur DX
+# Better Blur DX — Wobbly API companion
+
+This fork of Better Blur DX adds the Better Wobbly Windows inter-effect mesh API v1.
+Better Blur DX still owns blur generation and the final composite; Better Wobbly
+Windows supplies only the deformed window geometry.
+
+See [Better Wobbly Windows](MUST-FIX-LINK)
+
+The versioned inter-effect API is documented in
+[`docs/inter-effect-api.md`](docs/inter-effect-api.md). It lets another KWin
+effect request a deformed Better Blur DX composite without accessing or
+reimplementing the plugin's private textures, framebuffers or shaders.
+
 Better Blur DX is a loose continuation of [Better Blur](https://github.com/taj-ny/kwin-effects-forceblur/) - a fork of the Plasma 6 blur effect with additional features and bug fixes.
 
 ![image](https://github.com/user-attachments/assets/f8a7c618-89b4-485a-b0f8-29dd5f77e3ca)
@@ -34,100 +46,13 @@ KWin X11 doesn't see any API changes since version 6.5 meaning the Wayland and X
 
 # Installation
 > [!IMPORTANT]
-> If the effect stops working after a system upgrade, you will need to rebuild it or reinstall the package.
+> If the effect stops working after a system upgrade, rebuild and reinstall it.
 > The effect only works for the *exact KWin* version it was built for.
 > Additionally KWin needs to be restarted (e.g. via logout+login) to load an *updated* version of the effect
 > (the initial install doesn't need this).
 
-## Packages
-<details>
-  <summary>Arch Linux AUR (maintained by https://github.com/D3SOX)</summary>
-  <br>
-
-  **Tagged releases:**
-
-  Wayland:
-
-  ```sh
-  yay -S kwin-effects-better-blur-dx
-  ```
-
-  X11:
-
-  ```sh
-  yay -S kwin-effects-better-blur-dx-x11
-  ```
-  
-  **`-git` packages tracking the `main` branch:**
-
-  Wayland:
-
-  ```sh
-  yay -S kwin-effects-better-blur-dx-git
-  ```
-
-  X11:
-
-  ```sh
-  yay -S kwin-effects-better-blur-dx-x11-git
-  ```
-
-  (Or use your AUR helper of choice instead of `yay`)
-</details>
-
-<details>
-  <summary>Gentoo (maintained by me - https://github.com/xarblu)</summary>
-  <br>
-
-  ```sh
-  eselect repository enable xarblu-overlay
-  emerge --sync xarblu-overlay
-  emerge --ask kde-misc/kwin-effects-better-blur-dx
-  ```
-</details>
-
-<details>
-  <summary>Fedora COPR (maintained by https://github.com/Infinality)</summary>
-  <br>
-
-  Details: https://copr.fedorainfracloud.org/coprs/infinality/kwin-effects-better-blur-dx/
-
-  ```sh
-  dnf copr enable infinality/kwin-effects-better-blur-dx
-  dnf install kwin-effects-better-blur-dx
-  dnf install kwin-effects-better-blur-dx-x11
-  ```
-</details>
-
-<details>
-  <summary>NixOS (flakes)</summary>
-  <br>
-
-  ``flake.nix``:
-  ```nix
-  {
-    inputs = {
-      nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-
-      kwin-effects-better-blur-dx = {
-        url = "github:xarblu/kwin-effects-better-blur-dx";
-        inputs.nixpkgs.follows = "nixpkgs";
-      };
-    };
-  }
-  ```
-
-  ```nix
-  { inputs, pkgs, ... }:
-
-  {
-    environment.systemPackages = [
-      inputs.kwin-effects-better-blur-dx.packages.${pkgs.system}.default # Wayland
-      inputs.kwin-effects-better-blur-dx.packages.${pkgs.system}.x11 # X11
-    ];
-  }
-  ```
-</details>
+## Distribution packages
+No distribution packages are currently available for this fork. Install it manually from source.
 
 ## Manual
 > [!NOTE]
@@ -149,7 +74,7 @@ KWin X11 doesn't see any API changes since version 6.5 meaning the Wayland and X
   ```
   sudo pacman -S base-devel git extra-cmake-modules qt6-tools kwin
   ```
-  
+
   X11:
   ```
   sudo pacman -S base-devel git extra-cmake-modules qt6-tools kwin-x11
@@ -164,7 +89,7 @@ KWin X11 doesn't see any API changes since version 6.5 meaning the Wayland and X
   ```
   sudo apt install -y git cmake g++ extra-cmake-modules qt6-tools-dev kwin-dev libkf6configwidgets-dev gettext libkf6crash-dev libkf6globalaccel-dev libkf6kio-dev libkf6service-dev libkf6notifications-dev libkf6kcmutils-dev libkdecorations3-dev libxcb-composite0-dev libxcb-randr0-dev libxcb-shm0-dev libxcb-res0-dev libxcb-sync-dev
   ```
-  
+
   X11:
   ```
   sudo apt install -y git cmake g++ extra-cmake-modules qt6-tools-dev kwin-x11-dev libkf6configwidgets-dev gettext libkf6crash-dev libkf6globalaccel-dev libkf6kio-dev libkf6service-dev libkf6notifications-dev libkf6kcmutils-dev libkdecorations3-dev libxcb-composite0-dev libxcb-randr0-dev libxcb-shm0-dev libxcb-res0-dev libxcb-sync-dev
@@ -179,7 +104,7 @@ KWin X11 doesn't see any API changes since version 6.5 meaning the Wayland and X
   ```
   sudo dnf -y install git cmake extra-cmake-modules gcc-g++ kf6-kwindowsystem-devel plasma-workspace-devel libplasma-devel qt6-qtbase-private-devel qt6-qtbase-devel cmake kwin-devel extra-cmake-modules kwin-devel kf6-knotifications-devel kf6-kio-devel kf6-kcrash-devel kf6-ki18n-devel kf6-kguiaddons-devel libepoxy-devel kf6-kglobalaccel-devel kf6-kcmutils-devel kf6-kconfigwidgets-devel kf6-kdeclarative-devel kdecoration-devel kf6-kglobalaccel kf6-kdeclarative libplasma kf6-kio qt6-qtbase kf6-kguiaddons kf6-ki18n wayland-devel libdrm-devel
   ```
-  
+
   X11:
   ```
   sudo dnf -y install git cmake extra-cmake-modules gcc-g++ kf6-kwindowsystem-devel plasma-workspace-devel libplasma-devel qt6-qtbase-private-devel qt6-qtbase-devel cmake extra-cmake-modules kf6-knotifications-devel kf6-kio-devel kf6-kcrash-devel kf6-ki18n-devel kf6-kguiaddons-devel libepoxy-devel kf6-kglobalaccel-devel kf6-kcmutils-devel kf6-kconfigwidgets-devel kf6-kdeclarative-devel kdecoration-devel kf6-kglobalaccel kf6-kdeclarative libplasma kf6-kio qt6-qtbase kf6-kguiaddons kf6-ki18n wayland-devel libdrm-devel kwin-x11-devel
@@ -194,7 +119,7 @@ KWin X11 doesn't see any API changes since version 6.5 meaning the Wayland and X
   ```
   sudo zypper in -y git cmake-full gcc-c++ kf6-extra-cmake-modules kcoreaddons-devel kguiaddons-devel kconfigwidgets-devel kwindowsystem-devel ki18n-devel kiconthemes-devel kpackage-devel frameworkintegration-devel kcmutils-devel kirigami2-devel "cmake(KF6Config)" "cmake(KF6CoreAddons)" "cmake(KF6FrameworkIntegration)" "cmake(KF6GuiAddons)" "cmake(KF6I18n)" "cmake(KF6KCMUtils)" "cmake(KF6KirigamiPlatform)" "cmake(KF6WindowSystem)" "cmake(Qt6Core)" "cmake(Qt6DBus)" "cmake(Qt6Quick)" "cmake(Qt6Svg)" "cmake(Qt6Widgets)" "cmake(Qt6Xml)" "cmake(Qt6UiTools)" "cmake(KF6Crash)" "cmake(KF6GlobalAccel)" "cmake(KF6KIO)" "cmake(KF6Service)" "cmake(KF6Notifications)" libepoxy-devel kwin6-devel
   ```
-  
+
   X11:
   ```
   sudo zypper in -y git cmake-full gcc-c++ kf6-extra-cmake-modules kcoreaddons-devel kguiaddons-devel kconfigwidgets-devel kwindowsystem-devel ki18n-devel kiconthemes-devel kpackage-devel frameworkintegration-devel kcmutils-devel kirigami2-devel "cmake(KF6Config)" "cmake(KF6CoreAddons)" "cmake(KF6FrameworkIntegration)" "cmake(KF6GuiAddons)" "cmake(KF6I18n)" "cmake(KF6KCMUtils)" "cmake(KF6KirigamiPlatform)" "cmake(KF6WindowSystem)" "cmake(Qt6Core)" "cmake(Qt6DBus)" "cmake(Qt6Quick)" "cmake(Qt6Svg)" "cmake(Qt6Widgets)" "cmake(Qt6Xml)" "cmake(Qt6UiTools)" "cmake(KF6Crash)" "cmake(KF6GlobalAccel)" "cmake(KF6KIO)" "cmake(KF6Service)" "cmake(KF6Notifications)" libepoxy-devel kwin6-x11-devel
@@ -203,63 +128,43 @@ KWin X11 doesn't see any API changes since version 6.5 meaning the Wayland and X
 
 ### Building
 ```sh
-git clone https://github.com/xarblu/kwin-effects-better-blur-dx
-cd kwin-effects-better-blur-dx
-mkdir build
-cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr
-make -j$(nproc)
-sudo make install
+cd kwin-effects-better-blur-dx-wobbly
+./build.sh
 ```
 
-By default this will build the effect for the regular (Wayland) KWin.
-To build a version for KWin X11 add `-DBBDX_X11=ON` to the `cmake` invocation.
-
-<details>
-  <summary>Building on Fedora Kinoite</summary>
-  <br>
-
-  ```sh
-  # enter container
-  git clone https://github.com/xarblu/kwin-effects-better-blur-dx
-  cd kwin-effects-better-blur-dx
-  mkdir build
-  cd build
-  cmake .. -DCMAKE_INSTALL_PREFIX=/usr
-  make -j$(nproc)
-  cpack -V -G RPM
-  exit # exit container
-  sudo rpm-ostree install kwin-effects-better-blur-dx/build/kwin-better-blur-dx.rpm
-  ```
-</details>
+For X11, configure manually with `-DBBDX_X11=ON`. The installed plugin and KCM
+filenames are unique and do not overwrite the upstream effect.
 
 **Remove the *build* directory when rebuilding the effect.**
 
 # Usage
-This effect conflicts with the default KWin blur effect (and other effects replacing it).
 
-1. Install the plugin.
-2. Open the *Desktop Effects* page in *System Settings*.
-3. Disable any blur effects.
-4. Enable the *Better Blur DX* effect.
+1. Build and install this fork. It appears as **Better Blur DX — Wobbly API**.
+2. Disable the original effect if it is installed.
+3. Enable **Better Blur DX — Wobbly API** and **Better Wobbly Windows**.
 
-### Window transparency
-The window needs to be translucent in order for the blur to be visible. This can be done in multiple ways:
-- Use a transparent theme for the program if it supports it
-- Use a transparent color scheme, such as [Alpha](https://store.kde.org/p/1972214)
-- Create a window rule that reduces the window opacity
+There is no need to uninstall the original effect. Keep it disabled in KWin's
+Desktop Effects while this fork is enabled. Only one Better Blur DX implementation
+should be enabled at a time, because enabling both may cause visual or rendering
+conflicts.
 
-### Obtaining window classes
-The classes of windows to blur can be specified in the effect settings. You can obtain them in two ways:
-  - Run ``qdbus org.kde.KWin /KWin org.kde.KWin.queryWindowInfo`` and click on the window. You can use either *resourceClass* or *resourceName*.
-  - Right click on the titlebar, go to *More Options* and *Configure Special Window/Application Settings*. The class can be found at *Window class (application)*. If there is a space, for example *Navigator firefox*, you can use either *Navigator* or *firefox*.
+This fork provides normal stationary desktop blur and also handles API v1 requests
+from Better Wobbly Windows. During an active request, it generates or reuses its own
+cache and composites it directly through the Wobbly mesh. Better Wobbly's standalone
+renderer runs only when the provider is missing or fails technically. A
+`DeclinedByPolicy` result is final and prevents fallback from bypassing
+`Blur only matching` or `Blur all except matching`.
+
+The fork intentionally reads `[Effect-better-blur-dx]` from `kwinrc`, so existing
+Better Blur DX visual settings continue to apply.
 
 # Known Issues
-## Incompatibility with other effects
-This effect has some compatibility issues with some other effects.
+## Effect pairing
 
-- "Blur" from KWin - Because we effectively replace the KWin blur you shouldn't use both in parallel. Some windows might get double blurred and "look off" if you do.
-- "Wobbly Windows" from KWin - We're blurring a square region behind the window. Either that square will bleed out of the deformed window or KWin will skip the blur entirely while the "wobble effect" is active.
+Use this fork with **Better Wobbly Windows**. Keep the original Better Blur DX
+disabled when this fork is enabled; running both blur effects may cause conflicts.
+Do not enable KWin's stock Wobbly Windows effect at the same time as Better Wobbly
+Windows, because they both deform the same window geometry.
 
 ## High cursor latency or stuttering on Wayland
 This effect can be very resource-intensive if you have a lot of windows open. On Wayland, high GPU load may result in higher cursor latency or even stuttering. If that bothers you, set the following environment variable: ``KWIN_DRM_NO_AMS=1``. If that's not enough, try enabling or disabling the software cursor by also setting ``KWIN_FORCE_SW_CURSOR=0`` or ``KWIN_FORCE_SW_CURSOR=1``.

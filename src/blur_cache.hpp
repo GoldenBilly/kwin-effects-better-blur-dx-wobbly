@@ -308,6 +308,11 @@ public:
      */
     void drawCached(const KWin::RenderViewport &viewport, BBDX::BlurRenderData &renderInfo, KWin::GLVertexBuffer *vbo, const int vertexCount, const float modulation) const;
 
+    // Complete a cache flush without drawing the default screen composite.
+    // Used by inter-effect API consumers that will composite cachedTexture()
+    // themselves later in the same nested drawWindow() chain.
+    void finishExternalCache(BBDX::BlurRenderData &renderInfo) const;
+
     /**
      * vbo->draw() wrapper to draw into BlurCacheData of the provided cache
      */

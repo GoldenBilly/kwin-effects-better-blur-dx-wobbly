@@ -28,7 +28,7 @@ BlurEffectConfig::BlurEffectConfig(QObject *parent, const KPluginMetaData &data)
     BlurConfig::instance("kwinrc");
     addConfig(BlurConfig::self(), widget());
 
-    QFile about(":/effects/better_blur_dx/kcm/about.html");
+    QFile about(":/effects/better_blur_dx_wobbly_api/kcm/about.html");
     if (about.open(QIODevice::ReadOnly)) {
         const auto html = about.readAll()
             .replace("${version}", ABOUT_VERSION_STRING)
@@ -179,7 +179,7 @@ void BlurEffectConfig::save() {
                                          QStringLiteral("/Effects"),
                                          QDBusConnection::sessionBus());
 
-    interface.reconfigureEffect(QStringLiteral("better_blur_dx"));
+    interface.reconfigureEffect(QStringLiteral("better_blur_dx_wobbly_api"));
 }
 
 } // namespace BBDX

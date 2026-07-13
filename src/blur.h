@@ -137,9 +137,20 @@ private:
     RegionF blurRegion(EffectWindow *w) const;
     RegionF decorationBlurRegion(const EffectWindow *w) const;
     bool decorationSupportsBlurBehind(const EffectWindow *w) const;
+    bool upstreamBetterBlurDxLoaded() const;
+    bool canHandleBetterWobblyProviderRequest(const EffectWindow *w) const;
+    bool betterWobblyProviderPolicyAllowsBlur(const EffectWindow *w) const;
     bool shouldBlur(const EffectWindow *w, int mask, const WindowPaintData &data) const;
     void updateBlurRegion(EffectWindow *w);
     void blur(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &deviceRegion, WindowPaintData &data);
+    bool drawBetterWobblyMesh(const RenderTarget &renderTarget,
+                              const RenderViewport &viewport,
+                              EffectWindow *w,
+                              const Region &deviceRegion,
+                              WindowPaintData &data,
+                              BlurRenderData &renderInfo,
+                              const Rect &backgroundRect,
+                              float modulation);
     GLTexture *ensureNoiseTexture();
 
 private:
@@ -151,6 +162,16 @@ private:
         int offsetLocation;
         int halfpixelLocation;
     } m_onscreenPass;
+
+    struct
+    {
+        std::unique_ptr<GLShader> shader;
+        int mvpMatrixLocation = -1;
+        int textureSizeLocation = -1;
+        int opacityLocation = -1;
+    } m_wobblyCompositePass;
+
+    std::vector<GLVertex2D> m_wobblyCompositeVertices;
 
 #if BBDX_NOT_NEEDED
     struct
@@ -260,7 +281,10 @@ public:
 inline bool BlurEffect::provides(Effect::Feature feature)
 {
     if (feature == Blur) {
-        return true;
+        // Be the normal blur provider only when the original Better Blur DX is
+        // not loaded. This keeps the renamed build fully functional on its own
+        // without competing with the upstream plugin when both are enabled.
+        return !upstreamBetterBlurDxLoaded();
     }
     return KWin::Effect::provides(feature);
 }

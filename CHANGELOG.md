@@ -1,5 +1,27 @@
+## Policy-aware inter-effect fallback
+
+- Add API v1 result `DeclinedByPolicy` (`declined_by_policy`).
+- Matching/type exclusions no longer become ordinary technical declines.
+- Better Wobbly suppresses its embedded fallback for policy decisions, preserving
+  `Blur only matching` and `Blur all except matching`.
+
+
+## Moving-window provider opacity fix
+
+- Provider-owned Wobbly blur bypasses Better Blur DX's old 250 ms transformed-window fade-to-zero.
+- Provider geometry is fully opaque from the first active movement frame.
+- Any provider early return is explicitly reported as `Declined`, enabling the same-frame embedded fallback.
 # DEV
 Things not in any tagged release yet:
+
+### Better Wobbly companion isolation and provider-owned API v1
+- Give the API fork a unique effect ID, plugin/KCM filenames, package name,
+  include path, logging namespace and Qt resource namespace.
+- Better Wobbly supplies only a deformed mesh; Better Blur DX owns cache
+  generation, all material passes and the final screen composite.
+- The embedded Wobbly renderer is a strict missing/declined-provider fallback;
+  no second blur pyramid is rendered after a successful provider response.
+- Keep `[Effect-better-blur-dx]` shared for matching fallback settings.
 
 # 2.5.1
 
@@ -57,7 +79,7 @@ Version bump to fix version string - no actual changes
 
 ### Features:
 - New rounded corners pass to stop rectangular noise texture from "leaking"
-- Debug logging for (toggled with `QT_LOGGING_RULES=kwin_effect_better_blur_dx.*.debug=true`):
+- Debug logging for (toggled with `QT_LOGGING_RULES=kwin_effect_better_blur_dx_wobbly_api.*.debug=true`):
   - Added windows
   - Removed windows
   - `blurOrigin` changes

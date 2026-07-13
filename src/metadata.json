@@ -1,5 +1,6 @@
 {
     "KPlugin": {
+        "Id": "better_blur_dx_wobbly_api",
         "Authors": [
             {
                 "Name": "KWin development team"
@@ -18,10 +19,10 @@
             }
         ],
         "Category": "Appearance",
-        "Description": "Fork of the KWin Blur effect for KDE Plasma 6 with force blur and more",
+        "Description": "Better Blur DX fork with the Better Wobbly Windows inter-effect mesh API v1",
         "EnabledByDefault": false,
         "License": "GPL",
-        "Name": "Better Blur DX"
+        "Name": "Better Blur DX — Wobbly API"
     },
-    "X-KDE-ConfigModule": "kwin_better_blur_dx_config"
+    "X-KDE-ConfigModule": "kwin_better_blur_dx_wobbly_api_config"
 }
