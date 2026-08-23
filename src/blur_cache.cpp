@@ -7,6 +7,7 @@
 #include "blur.h"
 #include "settings.hpp"
 #include "utils.h"
+#include "rounded_corners_pass.hpp"
 
 #include <epoxy/gl.h>
 #include <qloggingcategory.h>
@@ -85,7 +86,7 @@ std::unique_ptr<BBDX::BlurCacheEntry> BBDX::BlurCacheEntry::create(const KWin::R
                         << "Size:" << backgroundRect;
 
     // allocate new cached texture + framebuffer for the blurred texture
-    glClearColor(0, 0, 0, 0);
+    glClearColor(0.0, 0.0, 0.0, 0.0);
     entry->m_cachedTexture = KWin::GLTexture::allocate(internalFormat, backgroundRect.size());
     if (!entry->m_cachedTexture) {
         qCWarning(BLUR_CACHE) << BBDX::LOG_PREFIX << "Failed to allocate an offscreen texture";
@@ -230,7 +231,6 @@ std::unique_ptr<BBDX::BlurCache> BBDX::BlurCache::create(BBDX::BlurEffect *effec
         return nullptr;
     } else {
         blurCache->m_texturePass.mvpMatrixLocation = blurCache->m_texturePass.shader->uniformLocation("modelViewProjectionMatrix");
-        blurCache->m_texturePass.modulationLocation = blurCache->m_texturePass.shader->uniformLocation("modulation");
     }
 
     return blurCache;
@@ -268,6 +268,7 @@ void BBDX::BlurCache::reconfigure() {
 void BBDX::BlurCache::preparePaintData(const KWin::RenderTarget *renderTarget,
                                        const KWin::RenderViewport *viewport,
                                        const KWin::RenderView *view,
+                                       const KWin::WindowPaintData *windowPaintData,
                                        const KWin::EffectWindow *window,
                                        const KWin::Region *dirtyRegion,
                                        KWin::GLFramebuffer *blitFramebuffer,
@@ -288,6 +289,7 @@ void BBDX::BlurCache::preparePaintData(const KWin::RenderTarget *renderTarget,
         .renderTarget = renderTarget,
         .viewport = viewport,
         .view = view,
+        .windowPaintData = windowPaintData,
         .window = window,
         .dirtyRegion = dirtyRegion,
         .backgroundRect = backgroundRect,
@@ -361,87 +363,64 @@ void BBDX::BlurCache::preparePaintData(const KWin::RenderTarget *renderTarget,
     }
 }
 
-uint BBDX::BlurCache::addedVertices() const {
-    return m_paintData.cacheShape.size() * 6;
-}
-
-void BBDX::BlurCache::setupVBO(std::span<KWin::GLVertex2D> &map, size_t &vboIndex) const {
-    const auto backgroundRect = m_paintData.backgroundRect;
-    const auto &cacheShape = m_paintData.cacheShape;
-
-    // The geometry used for the cache, in logical pixels
-    for (const auto &rect : cacheShape) {
-        const float x0 = rect.left();
-        const float y0 = rect.top();
-        const float x1 = rect.right();
-        const float y1 = rect.bottom();
-
-        const float u0 = x0 / backgroundRect->width();
-        const float v0 = 1.0f - y0 / backgroundRect->height();
-        const float u1 = x1 / backgroundRect->width();
-        const float v1 = 1.0f - y1 / backgroundRect->height();
-
-        // first triangle
-        map[vboIndex++] = GLVertex2D{
-            .position = QVector2D(x0, y0),
-            .texcoord = QVector2D(u0, v0),
-        };
-        map[vboIndex++] = GLVertex2D{
-            .position = QVector2D(x1, y1),
-            .texcoord = QVector2D(u1, v1),
-        };
-        map[vboIndex++] = GLVertex2D{
-            .position = QVector2D(x0, y1),
-            .texcoord = QVector2D(u0, v1),
-        };
-
-        // second triangle
-        map[vboIndex++] = GLVertex2D{
-            .position = QVector2D(x0, y0),
-            .texcoord = QVector2D(u0, v0),
-        };
-        map[vboIndex++] = GLVertex2D{
-            .position = QVector2D(x1, y0),
-            .texcoord = QVector2D(u1, v0),
-        };
-        map[vboIndex++] = GLVertex2D{
-            .position = QVector2D(x1, y1),
-            .texcoord = QVector2D(u1, v1),
-        };
-    }
-}
-
 void BBDX::BlurCache::drawCached(const KWin::RenderViewport &viewport, BBDX::BlurRenderData &renderInfo, KWin::GLVertexBuffer *vbo, const int vertexCount, const float modulation) const {
-    const auto &scaledBackgroundRect = *m_paintData.scaledBackgroundRect;
+    /**
+     * Common setup
+     */
 
-    KWin::ShaderManager::instance()->pushShader(m_texturePass.shader.get());
+    // Our scissor helper currently isn't implemented
+    // for RenderTarget's offsets (expects topLeft at 0,0)
+    BBDX::clearGLScissor();
 
-    QMatrix4x4 projectionMatrix = viewport.projectionMatrix();
-    projectionMatrix.translate(scaledBackgroundRect.x(), scaledBackgroundRect.y());
+    // Don't write alpha because KWin's RenderTarget texture might not have it
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 
-    KWin::GLTexture* read;
-    if (const auto &cacheEntry = renderInfo.cache.get()) {
-        read = cacheEntry->cachedTexture();
-        cacheEntry->flushed(m_paintData);
-    } else {
-        // bail if we didn't select or add a cache entry
-        qCritical(BLUR_CACHE) << BBDX::LOG_PREFIX << "drawCached() called without a valid cache entry";
-        KWin::ShaderManager::instance()->popShader();
-        return;
+    const auto &cacheEntry = renderInfo.cache.get();
+
+    /**
+     * Rounded corners on-screen paint
+     */
+    if (m_effect->roundedCornersPass()->drawRounded(m_effect->windowManager(), this, cacheEntry, vbo, vertexCount, modulation)) {
+        goto done;
     }
 
-    m_texturePass.shader->setUniform(m_texturePass.mvpMatrixLocation, projectionMatrix);
-    m_texturePass.shader->setUniform(m_texturePass.modulationLocation, modulation);
-    read->bind();
+    /**
+     * Regular "squared" on-screen paint
+     */
+    {
+        const auto &scaledBackgroundRect = *m_paintData.scaledBackgroundRect;
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+        KWin::ShaderManager::instance()->pushShader(m_texturePass.shader.get());
 
-    vbo->draw(GL_TRIANGLES, vboStartScreen(), vertexCount);
+        QMatrix4x4 projectionMatrix = viewport.projectionMatrix();
+        projectionMatrix.translate(scaledBackgroundRect.x(), scaledBackgroundRect.y());
 
-    glDisable(GL_BLEND);
+        m_texturePass.shader->setUniform(m_texturePass.mvpMatrixLocation, projectionMatrix);
 
-    KWin::ShaderManager::instance()->popShader();
+        cacheEntry->cachedTexture()->bind();
+
+        if (modulation < 1.0) {
+            glEnable(GL_BLEND);
+            glBlendColor(0.0, 0.0, 0.0, modulation);
+            glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+        }
+
+        vbo->draw(GL_TRIANGLES, vboStartScreen(), vertexCount);
+
+        if (modulation < 1.0) {
+            glDisable(GL_BLEND);
+        }
+
+        KWin::ShaderManager::instance()->popShader();
+    }
+
+done:
+    /**
+     * Common cleanup
+     */
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+    cacheEntry->flushed(m_paintData);
 }
 
 void BBDX::BlurCache::finishExternalCache(BBDX::BlurRenderData &renderInfo) const {

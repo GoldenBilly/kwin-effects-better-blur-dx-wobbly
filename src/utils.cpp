@@ -18,10 +18,6 @@ QSize BBDX::getTextureSize(const QRect &backgroundRect, const size_t i) {
                  std::max(1, backgroundRect.height() / (1 << i)));
 }
 
-void BBDX::setTextureSwizzle(KWin::GLTexture *texture) {
-    texture->setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ONE);
-}
-
 void BBDX::setGLScissor(const KWin::Region &dirtyRegion, const KWin::Rect &backgroundRect) {
     const auto fbo = KWin::GLFramebuffer::currentFramebuffer();
     if (!fbo) {
@@ -42,11 +38,21 @@ void BBDX::setGLScissor(const KWin::Region &dirtyRegion, const KWin::Rect &backg
     const double scaledRight{std::min(static_cast<double>(texture->width()), std::ceil(boundingRect.right() * scaleX))};
     const double scaledBottom{std::min(static_cast<double>(texture->height()), std::ceil(boundingRect.bottom() * scaleY))};
 
-    const int glWidth{std::max(0, static_cast<int>(scaledRight - scaledLeft))};
-    const int glHeight{std::max(0, static_cast<int>(scaledBottom - scaledTop))};
+    // 1 <= scissor width/height <= texture width/height
+    const int glWidth{std::min(std::max(static_cast<int>(std::ceil(scaledRight - scaledLeft)), 1), texture->width())};
+    const int glHeight{std::min(std::max(static_cast<int>(std::ceil(scaledBottom - scaledTop)), 1), texture->height())};
 
-    const int glX{static_cast<int>(scaledLeft)};
-    const int glY{static_cast<int>(texture->height() - (scaledTop + glHeight))};
+    // 0 <= scissor x/y
+    int glX{std::max(static_cast<int>(scaledLeft), 0)};
+    int glY{std::max(static_cast<int>(texture->height() - (scaledTop + glHeight)), 0)};
+
+    // move box towards (0,0) in case it doesn't fit
+    if (glX + glWidth > texture->width()) {
+        glX = texture->width() - glWidth;
+    }
+    if (glY + glHeight > texture->height()) {
+        glY = texture->height() - glHeight;
+    }
 
     glEnable(GL_SCISSOR_TEST);
     glScissor(glX, glY, glWidth, glHeight);

@@ -201,8 +201,11 @@ void BBDX::Window::updateForceBlurRegion() {
     );
 
     if (!m_windowManager->blurDecorations() && m_effectwindow->decoration()) {
-        // frame has content + decorations so to just get the decorations clip the contents
-        const auto decorationRegion = frame - BBDX::rectRoundedOut(m_effectwindow->contentsRect());
+        // Grow contentsRect by 1px before subtracting it. This keeps fractional
+        // positions from leaving a one-pixel decoration gap (for example with
+        // Klassy) while preserving the fork's frame-only API representation.
+        const auto decorationRegion = frame
+            - BBDX::rectRoundedOut(m_effectwindow->contentsRect()).adjusted(-1, -1, 1, 1);
 
         for (const auto &rect : decorationRegion.rects()) {
             frame -= rect;

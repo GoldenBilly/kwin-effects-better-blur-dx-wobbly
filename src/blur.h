@@ -169,6 +169,9 @@ private:
         int mvpMatrixLocation = -1;
         int textureSizeLocation = -1;
         int opacityLocation = -1;
+        int boxLocation = -1;
+        int cornerRadiusLocation = -1;
+        int roundedMaskEnabledLocation = -1;
     } m_wobblyCompositePass;
 
     std::vector<GLVertex2D> m_wobblyCompositeVertices;
@@ -276,6 +279,7 @@ private:
 public:
     WindowManager* windowManager() const { return m_windowManager.get(); }
     BlurCache* blurCache() const { return m_blurCache.get(); }
+    RoundedCornersPass* roundedCornersPass() const { return m_roundedCornersPass.get(); }
 };
 
 inline bool BlurEffect::provides(Effect::Feature feature)

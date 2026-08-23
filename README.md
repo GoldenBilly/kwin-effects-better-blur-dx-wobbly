@@ -127,15 +127,40 @@ No distribution packages are currently available for this fork. Install it manua
 </details>
 
 ### Building
+
+When building under normal conditions, simply clone the repo and run the included build script.
+
 ```sh
+git clone https://github.com/GoldenBilly/kwin-effects-better-blur-dx-wobbly
 cd kwin-effects-better-blur-dx-wobbly
+chmod +x build.sh
 ./build.sh
 ```
 
-For X11, configure manually with `-DBBDX_X11=ON`. The installed plugin and KCM
-filenames are unique and do not overwrite the upstream effect.
+By default, this will build and install the effect for the regular (Wayland) KWin.
+To build a version for KWin X11, run the script with the `--x11` flag.
 
-**Remove the *build* directory when rebuilding the effect.**
+The installed plugin and KCM filenames are unique and do not overwrite the
+upstream effect.
+
+<details>
+  <summary>Building on Fedora Kinoite</summary>
+  <br>
+
+  When building for Fedora Kinoite, run the build script with the `--kinoite` flag inside your container to generate the RPM package.
+
+  ```sh
+  # enter container
+  git clone https://github.com/GoldenBilly/kwin-effects-better-blur-dx-wobbly
+  cd kwin-effects-better-blur-dx-wobbly
+  chmod +x build.sh
+  ./build.sh --kinoite
+  exit # exit container
+  sudo rpm-ostree install kwin-effects-better-blur-dx-wobbly/build/kwin-better-blur-dx-wobbly-api.rpm
+  ```
+</details>
+
+**Rerun the build script when rebuilding the effect.**
 
 # Usage
 

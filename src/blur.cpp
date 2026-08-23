@@ -37,6 +37,7 @@
 #include <scene/backgroundeffectitem.h>
 #endif
 #include <scene/decorationitem.h>
+#include <scene/borderradius.h>
 #include <scene/scene.h>
 #include <scene/surfaceitem.h>
 #include <scene/windowitem.h>
@@ -162,6 +163,10 @@ BlurEffect::BlurEffect()
     m_wobblyCompositePass.mvpMatrixLocation = m_wobblyCompositePass.shader->uniformLocation("modelViewProjectionMatrix");
     m_wobblyCompositePass.textureSizeLocation = m_wobblyCompositePass.shader->uniformLocation("textureSize");
     m_wobblyCompositePass.opacityLocation = m_wobblyCompositePass.shader->uniformLocation("opacity");
+    m_wobblyCompositePass.boxLocation = m_wobblyCompositePass.shader->uniformLocation("box");
+    m_wobblyCompositePass.cornerRadiusLocation = m_wobblyCompositePass.shader->uniformLocation("cornerRadius");
+    m_wobblyCompositePass.roundedMaskEnabledLocation =
+        m_wobblyCompositePass.shader->uniformLocation("roundedMaskEnabled");
 
 #if BBDX_NOT_NEEDED
     m_roundedOnscreenPass.shader = ShaderManager::instance()->generateShaderFromFile(ShaderTrait::MapTexture,
@@ -644,6 +649,11 @@ bool BlurEffect::supported()
         return false;
     }
 
+    if (!context->supportsTextureSwizzle()) {
+        qCWarning(KWIN_BLUR) << BBDX::LOG_PREFIX << "Effect unsupported: OpenGL context does not support texture swizzle (GL_ARB_texture_swizzle)";
+        return false;
+    }
+
     qCInfo(KWIN_BLUR) << BBDX::LOG_PREFIX << "Effect supported";
     return true;
 }
@@ -1067,6 +1077,28 @@ bool BlurEffect::drawBetterWobblyMesh(const RenderTarget &renderTarget,
     m_wobblyCompositePass.shader->setUniform(m_wobblyCompositePass.opacityLocation,
                                               modulation * std::clamp(mesh.opacity, 0.0f, 1.0f));
 
+    // The provider composite bypasses BlurCache::drawCached(), so its rounded
+    // corner pass must be applied in the mesh's undeformed cache coordinates.
+    // This keeps the mask attached to the window while the output vertices wobble.
+    const BorderRadius cornerRadius = m_windowManager->getEffectiveBorderRadius(w);
+    const RectF transformedRect = RectF{
+        w->frameGeometry().x() + data.xTranslation(),
+        w->frameGeometry().y() + data.yTranslation(),
+        w->frameGeometry().width() * data.xScale(),
+        w->frameGeometry().height() * data.yScale(),
+    };
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
+    const RectF box{snapToPixelGridF(transformedRect).translated(-backgroundRect.topLeft())};
+#else
+    const RectF box{transformedRect.rounded().translated(-backgroundRect.topLeft())};
+#endif
+    m_wobblyCompositePass.shader->setUniform(m_wobblyCompositePass.boxLocation,
+        QVector4D(box.horizontalCenter(), box.verticalCenter(), box.width() * 0.5, box.height() * 0.5));
+    m_wobblyCompositePass.shader->setUniform(m_wobblyCompositePass.cornerRadiusLocation,
+        cornerRadius.rounded().toVector());
+    m_wobblyCompositePass.shader->setUniform(m_wobblyCompositePass.roundedMaskEnabledLocation,
+        cornerRadius.isNull() ? 0.0f : 1.0f);
+
     renderInfo.cache->cachedTexture()->bind();
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
@@ -1215,7 +1247,11 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
             renderInfo.cache->invalidate(static_cast<uint>(BlurCacheInvalidationFlag::FULL), "New framebuffers required");
         }
 
-        glClearColor(0, 0, 0, 0);
+        // BBDX: alpha 1.0
+        // unknown (yet-to-be-blitted) pixels should be black
+        // instead of transparent to avoid artifacts when dragging
+        // windows across screen borders
+        glClearColor(0.0, 0.0, 0.0, 1.0);
         for (size_t i = 0; i <= m_iterationCount; ++i) {
             auto texture = GLTexture::allocate(textureFormat, BBDX::getTextureSize(backgroundRect, i));
             if (!texture) {
@@ -1253,6 +1289,7 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
     m_blurCache->preparePaintData(&renderTarget,
                                   &viewport,
                                   m_currentView,
+                                  &data,
                                   w,
                                   &dirtyRegion,
                                   renderInfo.framebuffers[0].get(),
@@ -1276,7 +1313,7 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
     vbo->setAttribLayout(std::span(GLVertexBuffer::GLVertex2DLayout), sizeof(GLVertex2D));
 
     const int vertexCount = effectiveShape.size() * 6;
-    if (auto result = vbo->map<GLVertex2D>(6 + m_blurCache->addedVertices() + vertexCount)) {
+    if (auto result = vbo->map<GLVertex2D>(6 + vertexCount)) {
         auto map = *result;
 
         size_t vboIndex = 0;
@@ -1323,9 +1360,6 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
                 .texcoord = QVector2D(u1, v1),
             };
         }
-
-        // BBDX:
-        m_blurCache->setupVBO(map, vboIndex);
 
         // The geometry that will be painted on screen, in device pixels.
         for (const RectF &rect : effectiveShape) {
@@ -1421,7 +1455,6 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
                                       0.5 / read->colorAttachment()->height());
             m_downsamplePass.shader->setUniform(m_downsamplePass.halfpixelLocation, halfpixel);
 
-            BBDX::setTextureSwizzle(read->colorAttachment());
             read->colorAttachment()->bind();
 
             GLFramebuffer::pushFramebuffer(draw.get());
@@ -1450,7 +1483,6 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
                                       0.5 / read->colorAttachment()->height());
             m_upsamplePass.shader->setUniform(m_upsamplePass.halfpixelLocation, halfpixel);
 
-            BBDX::setTextureSwizzle(read->colorAttachment());
             read->colorAttachment()->bind();
 
             BBDX::setGLScissor(dirtyRegion, backgroundRect);
@@ -1537,7 +1569,6 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
         m_onscreenPass.shader->setUniform(m_onscreenPass.offsetLocation, float(m_offset));
         } // indent intentional for KWin diff
 
-        BBDX::setTextureSwizzle(read->colorAttachment());
         read->colorAttachment()->bind();
 
 #if BBDX_NOT_NEEDED
@@ -1596,10 +1627,6 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
         }
 
         glDisable(GL_BLEND);
-    }
-
-    if (const BorderRadius cornerRadius = m_windowManager->getEffectiveBorderRadius(w); !cornerRadius.isNull()) {
-        m_roundedCornersPass->apply(cornerRadius, backgroundRect, renderInfo, w, data, vbo, m_blurCache.get());
     }
 
     // BBDX:
