@@ -1,6 +1,6 @@
 # Better Blur DX — Wobbly API companion
 
-This fork of Better Blur DX adds the Better Wobbly Windows inter-effect mesh API v1.
+This fork of Better Blur DX adds the Better Wobbly Windows inter-effect mesh API.
 Better Blur DX still owns blur generation and the final composite; Better Wobbly
 Windows supplies only the deformed window geometry.
 
