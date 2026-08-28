@@ -200,16 +200,21 @@ void BBDX::Window::updateForceBlurRegion() {
             .translated(-m_effectwindow->frameGeometry().topLeft())
     );
 
-    if (!m_windowManager->blurDecorations() && m_effectwindow->decoration()) {
-        // Grow contentsRect by 1px before subtracting it. This keeps fractional
-        // positions from leaving a one-pixel decoration gap (for example with
-        // Klassy) while preserving the fork's frame-only API representation.
-        const auto decorationRegion = frame
-            - BBDX::rectRoundedOut(m_effectwindow->contentsRect()).adjusted(-1, -1, 1, 1);
+    // content at this point has content + decorations
+    // so to just get the decorations clip the contentsRect
+    if (m_effectwindow->decoration()) {
+        // Grow `contentsRect` by 1px to ensure the content reaches
+        // the decoration and leaves no gap (e.g. Klassy seems to use
+        // integer based blur regions that push the region up due to rounding
+        // when the window is at a fractional position)
+        // Because it's only used for *clipping* `content`
+        // this should never lead to the actual content bleeding out from the window.
+        frame = content - BBDX::rectRoundedOut(m_effectwindow->contentsRect()).adjusted(-1, -1, 1, 1);
+    }
 
-        for (const auto &rect : decorationRegion.rects()) {
-            frame -= rect;
-        }
+    // now clip the frame on decorated windows to get the actual content
+    for (const auto &rect : frame.rects()) {
+        content -= rect;
     }
 
     // unchanged
