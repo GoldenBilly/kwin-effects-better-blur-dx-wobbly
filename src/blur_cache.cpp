@@ -565,9 +565,18 @@ BBDX::WallpaperData* BBDX::BlurCache::getWallpaper() {
     const RenderViewport wallpaperRenderViewport{wallpaper.geometry, 1.0, wallpaperRenderTarget, QPoint{}};
     WindowPaintData data{};
 
+    // KWin >=6.8 report success; for older versions
+    // we just have to trust that the draw succeeded
+    bool success{true};
     GLFramebuffer::pushFramebuffer(wallpaper.framebuffer.get());
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 7, 90)
     effects->drawWindow(wallpaperRenderTarget, wallpaperRenderViewport, desktop, KWin::Scene::PAINT_WINDOW_TRANSFORMED, KWin::Region::infinite(), data);
+#else
+    success = effects->drawWindow(wallpaperRenderTarget, wallpaperRenderViewport, desktop, KWin::Scene::PAINT_WINDOW_TRANSFORMED, KWin::Region::infinite(), data);
+#endif
     GLFramebuffer::popFramebuffer();
+
+    if (!success) return nullptr;
 
     wallpaper.window = desktop->window();
     wallpaper.damaged = false;

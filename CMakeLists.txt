@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16.0)
 
 project(kwin_better_blur_dx_wobbly_api
-    VERSION 2.5.1
+    VERSION 2.6.0
     LANGUAGES CXX
 )
 

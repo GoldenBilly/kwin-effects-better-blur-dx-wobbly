@@ -686,19 +686,27 @@ RegionF BlurEffect::blurRegion(EffectWindow *w) const
         const std::optional<RegionF> &content = it->second.content;
         const std::optional<RegionF> &frame = it->second.frame;
         if (content.has_value()) {
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
             if (content->isEmpty()) {
                 // An empty region means that the blur effect should be enabled
                 // for the whole window.
-#if KWIN_VERSION < KWIN_VERSION_CODE(6, 6, 90)
                 region = Rect(w->contentsRect().toRect());
-            } else {
+            } else if (w->decoration()) {
                 region = content->translated(w->contentsRect().topLeft().toPoint()) & w->contentsRect().toRect();
-#else
-                region = w->contentsRect();
             } else {
-                region = content->translated(w->contentsRect().topLeft()) & w->contentsRect();
-#endif
+                region = *content & w->contentsRect().toRect();
             }
+#else
+            if (content->isEmpty()) {
+                // An empty region means that the blur effect should be enabled
+                // for the whole window.
+                region = w->contentsRect();
+            } else if (w->decoration()) {
+                region = content->translated(w->contentsRect().topLeft()) & w->contentsRect();
+            } else {
+                region = *content & w->contentsRect();
+            }
+#endif
             if (frame.has_value()) {
                 region += frame.value();
             }
@@ -962,6 +970,7 @@ bool BlurEffect::shouldBlur(const EffectWindow *w, int mask, const WindowPaintDa
     return true;
 }
 
+#if KWIN_VERSION < KWIN_VERSION_CODE(6, 7, 90)
 void BlurEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &deviceRegion, WindowPaintData &data)
 {
     clearBetterWobblyProviderResult(w);
@@ -983,6 +992,15 @@ void BlurEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewpo
     effects->drawWindow(renderTarget, viewport, w, mask, deviceRegion, data);
     clearBetterWobblyProviderResult(w);
 }
+#else
+bool BlurEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &deviceRegion, WindowPaintData &data)
+{
+    blur(renderTarget, viewport, w, mask, deviceRegion, data);
+
+    // Draw the window over the blurred area
+    return effects->drawWindow(renderTarget, viewport, w, mask, deviceRegion, data);
+}
+#endif
 
 GLTexture *BlurEffect::ensureNoiseTexture()
 {

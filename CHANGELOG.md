@@ -11,8 +11,6 @@
 - Provider-owned Wobbly blur bypasses Better Blur DX's old 250 ms transformed-window fade-to-zero.
 - Provider geometry is fully opaque from the first active movement frame.
 - Any provider early return is explicitly reported as `Declined`, enabling the same-frame embedded fallback.
-# DEV
-Things not in any tagged release yet:
 
 ### Better Wobbly companion isolation and provider-owned API v1
 - Give the API fork a unique effect ID, plugin/KCM filenames, package name,
@@ -22,6 +20,25 @@ Things not in any tagged release yet:
 - The embedded Wobbly renderer is a strict missing/declined-provider fallback;
   no second blur pyramid is rendered after a successful provider response.
 - Keep `[Effect-better-blur-dx]` shared for matching fallback settings.
+
+# DEV
+Things not in any tagged release yet:
+
+# 2.6.0
+
+### Features
+- **Plasma 6.8 support**
+- **"Wallpaper" Mode**
+  Behaves similar to the old `kwin-effects-forceblur` "Static Blur"
+  but using the same pipeline as the regular blur (meaning refraction etc. are compatible).
+  This mode is still considered experimental may sometimes have weird behaviour.
+- **Blur Cache Options**
+  You can now change the flush interval (smaller meaning "more FPS")
+  or disable the cache entirely.
+
+### Misc
+- Reworked how rounded corners are masked
+- The CMake option `BETTERBLUR_X11` was renamed to `BBDX_X11`
 
 # 2.5.1
 

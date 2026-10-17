@@ -351,11 +351,7 @@ void BBDX::Window::reconfigure() {
     m_blurMenus = m_windowManager->blurMenus();
     m_blurDocks = m_windowManager->blurDocks();
 
-    if (shouldForceBlur()) {
-        m_shouldForceBlur = true;
-    } else {
-        m_shouldForceBlur = false;
-    }
+    m_shouldForceBlur = shouldForceBlur();
 
     m_userBorderRadius = m_windowManager->userBorderRadius();
 
@@ -367,7 +363,7 @@ void BBDX::Window::reconfigure() {
 }
 
 void BBDX::Window::getFinalBlurRegion(std::optional<KWin::RegionF> &content, std::optional<KWin::RegionF> &frame) {
-    unsigned int oldBlurOriginMask = m_blurOriginMask;
+    const auto oldBlurOriginMask = m_blurOriginMask;
 
     // If we already have a blur region at this point
     // the window requested it.
